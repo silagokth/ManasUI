@@ -135,8 +135,6 @@
                 jsonSchema = jsonObj;
                 clearContent();
                 loadInstrOptions();
-
-                //showInstruction();
             }
 
             /* Remove current content before appending the new one */
@@ -671,91 +669,6 @@
 
 
             /************************************************End**********************************************************/
-
-
-            /*For testing purpose, to check if load correct json file (isa_v1.json) by displaying its content*/
-            /*
-            function showInstruction() {
-                var jsonObj = jsonSchema;
-                var pPlatform = document.createElement('p');
-                var pInstrBitwidth = document.createElement('p');
-                var pInstrCodeBitwidth = document.createElement('p');
-                var pBlockStartL1 = document.createElement('p');
-                var pBlockEndL1 = document.createElement('p');
-                var instructionList;
-
-                
-                pPlatform.innerHTML = "<pre>  &quot;platform&quot;: " + jsonObj.platform + "</pre>";
-                pInstrBitwidth.innerHTML = "<pre>  &quot;instr_bitwidth&quot;: " + jsonObj.instr_bitwidth + "</pre>";
-                pInstrCodeBitwidth.innerHTML = "<pre>  &quot;instr_code_bitwidth&quot;: " + jsonObj.instr_code_bitwidth + "</pre>";
-                pBlockStartL1.innerHTML = "<span><br/>{</span>";
-
-                schemaDiv.appendChild(pBlockStartL1);
-                schemaDiv.appendChild(pPlatform);
-                schemaDiv.appendChild(pInstrBitwidth);
-                schemaDiv.appendChild(pInstrCodeBitwidth);
-                instructionList = jsonObj.instruction_templates;
-
-                //console.log(typeof instructionList);
-
-                for (let i in instructionList) {
-                    var pBlockStartL2 = document.createElement('p');
-                    var pBlockEndL2 = document.createElement('p');
-                    var pInsCode = document.createElement('p');
-                    var pInsName = document.createElement('p');
-                    var pInsPhase = document.createElement('p');
-                    var pInsMaxChunk = document.createElement('p');
-                    var divInstructionItem = document.createElement('div');
-                    var segmentList;
-
-                    //console.log("ins: " + i);
-                    pBlockStartL2.innerHTML = "<pre><span>  [</span></pre>";
-                    pInsCode.innerHTML = "<pre>    &quot;code&quot;: " + instructionList[i].code + "</pre>";
-                    pInsName.innerHTML = "<pre>    &quot;name&quot;: " + instructionList[i].name + "</pre>";
-                    pInsPhase.innerHTML = "<pre>    &quot;phase&quot;: " + instructionList[i].phase + "</pre>";
-                    pInsMaxChunk.innerHTML = "<pre>    &quot;max_chunk&quot;: " + instructionList[i].max_chunk + "</pre>";
-
-                    divInstructionItem.appendChild(pBlockStartL2);
-                    divInstructionItem.appendChild(pInsCode);
-                    divInstructionItem.appendChild(pInsName);
-                    divInstructionItem.appendChild(pInsPhase);
-                    divInstructionItem.appendChild(pInsMaxChunk);
-
-                    segmentList = instructionList[i].segment_templates;
-
-                    for (let j in segmentList) {
-                        var pBlockStartL3 = document.createElement('p');
-                        var pBlockEndL3 = document.createElement('p');
-                        var pSegId = document.createElement('p');
-                        var pSegName = document.createElement('p');
-                        var pSegBitwidth = document.createElement('p');
-                        var divSegmentItem = document.createElement('div');
-
-                        //console.log("seg: " + j);
-                        pBlockStartL3.innerHTML = "<pre><span>    {</span></pre>";
-                        pSegId.innerHTML = "<pre>      &quot;id&quot;: " + segmentList[j].id + "</pre>";
-                        pSegName.innerHTML = "<pre>      &quot;name&quot;: " + segmentList[j].name + "</pre>";
-                        pSegBitwidth.innerHTML = "<pre>      &quot;bitwidth&quot;: " + segmentList[j].bitwidth + "</pre>";
-
-                        divSegmentItem.appendChild(pBlockStartL3);
-                        divSegmentItem.appendChild(pSegId);
-                        divSegmentItem.appendChild(pSegName);
-                        divSegmentItem.appendChild(pSegBitwidth);
-
-                        pBlockEndL3.innerHTML = "<pre><span>    }</span></pre>";
-                        divSegmentItem.appendChild(pBlockEndL3);
-                        divInstructionItem.appendChild(divSegmentItem);
-                    }
-                    pBlockEndL2.innerHTML = "<pre><span>  ]</span></pre>";
-                    divInstructionItem.appendChild(pBlockEndL2)
-                    schemaDiv.appendChild(divInstructionItem);
-                }
-                pBlockEndL1.innerHTML = "<span>}</span>";
-                schemaDiv.appendChild(pBlockEndL1);
-            }
-            */
-
-
     </script>
 </body>
 </html>
