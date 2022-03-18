@@ -1,0 +1,73 @@
+* {
+    margin: 0
+}
+
+#inputFiles {
+    margin: 5px 10px 0 0;
+    width: 300px;
+    direction: rtl;
+    float: right;
+    display: block;
+    border: none
+}
+
+#showInstrOptions {
+    margin: 5px 0 5px 0;
+}
+
+#instrInputGroup {
+    margin: 5px 0 5px 0;
+}
+
+#editableFields {
+    border: 1px solid;
+    border-radius: 3px;
+}
+
+#programFields {
+    overflow: scroll;
+    -ms-overflow-style: none; /* IE and Edge */
+    width: inherit;
+    height: 500px;
+    border: 1px solid
+}
+
+#programFields::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+}
+
+#instrPlotCanvas {
+    overflow: scroll;
+    -ms-overflow-style: none; /* IE and Edge */
+    width: inherit;
+    height: 500px;
+    border: 1px solid
+}
+
+#instrPlotCanvas::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+}
+
+
+
+#schema {
+    display: block;
+    float: left;
+    margin: 50px 0 0 80px; 
+    width: 300px;
+    background-color: lightgrey
+}
+
+    #schema span {
+        width: 300px;
+        background-color: lightgrey
+    }
+
+    #schema p {
+        margin-top: -8px
+    }
+
+.bi {
+    vertical-align: -.125em;
+    fill: currentColor;
+}

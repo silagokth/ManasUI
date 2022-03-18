@@ -1,0 +1,761 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="description" content="InstructionSet">
+    <meta name="author" content="Yuxuan">
+
+    <title>Instruction Set</title>
+
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.0.js"></script>
+</head>
+<body>
+    <header>
+        <div class="px-3 py-2 bg-dark text-white">
+            <div class="container">
+                <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+                    <a href="/" class="d-flex align-items-center my-2 my-lg-0 me-lg-auto text-white text-decoration-none">
+                        <!--Add icon at the leading place-->
+                    </a>
+                    <ul class="nav col-12 col-lg-auto my-2 justify-content-center my-md-0 text-small">
+                        <li>
+                            <a href="#" class="nav-link text-white">
+                                Home
+                            </a>
+                        </li>
+                        <!--<li><a href="#" class="nav-link text-white">Page2</a></li>-->
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-3 py-2 border-bottom mb-3">
+            <div class="container d-flex flex-wrap justify-content-center">
+                <input class="form-control" type="file" id="inputFiles" />
+            </div>
+        </div>
+    </header>
+
+    <section id="consoles">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-6">
+                    <canvas id="instrPlotCanvas"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <textarea id="programFields" onClick="handleClickOnTextarea()" readonly></textarea>
+
+                    <select id="showInstrOptions" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                        <option value="0">Instruction Set</option>
+                    </select>
+
+                    <div class="input-group input-group-sm mb-3" id="instrInputGroup">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text" id="workingLine">00000</span>
+                        </div>
+                        <input type="text" class="form-control" id="userInput" disabled>
+                    </div>
+
+                    <div id="instrEditField">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonEdit" data-toggle="collapse" data-target="#editableFields" aria-expanded="false" aria-controls="editableFields">
+                            EDIT
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonInsert" onClick="insertUserInput(false)">INSERT</button>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonModify" onClick="modifyUserSelect()">MODIFY</button>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonDelete" onClick="deleteUserSelect()">DELETE</button>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonEnter" onClick="insertUserInput(true)">ENTER</button>
+                        <div class="collapse border-secondary" id="editableFields">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-6">
+                    <div id="schema"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+            //Store the json content as an object
+            var jsonSchema = null;
+            //Map the value of "select" to instruction name
+            var instructionMap = {};
+            //Hold the current selected instruction
+            var currentSelectedInstr = "";
+            //Record the order of all input lines in textarea 
+            var programLines = ['\n'];
+            //Record the start position of each line
+            var programLineEndPos = [document.getElementById("programFields").value.length];
+            //save the current selected line number 
+            var textareaWl = 0;
+
+            //For testing purpose, a division to display the loaded json file
+            var schemaDiv = document.getElementById('schema');
+
+
+            /*Load the selected file -> expected "isa.json" */
+            function handleFileSelect(evt) {
+                var files = evt.target.files; // FileList object
+
+                // Loop through the FileList
+                for (var i = 0, f; f = files[i]; i++) {
+
+                    var reader = new FileReader();
+
+                    reader.onload = (function (theFile) {
+                        return function (e) {
+
+                            fetch(e.target.result)
+                                .then(res => res.json()) // the .json() method parses the JSON response into a JS object literal
+                                .then(data => updateInstructionOptions(data));
+                        }
+                    })(f);
+
+                    reader.readAsDataURL(f);
+                }
+            }
+
+            document.getElementById('inputFiles').addEventListener('change', handleFileSelect, false);
+
+            /* update the global object and instrcution options*/
+            function updateInstructionOptions(jsonObj) {
+                jsonSchema = jsonObj;
+                clearContent();
+                loadInstrOptions();
+
+                //showInstruction();
+            }
+
+            /* Remove current content before appending the new one */
+            function clearContent() {
+                var instrOptionsSelect = document.getElementById('showInstrOptions');
+                var optionInstruction = document.createElement('option');
+
+                optionInstruction.selected = true;
+                optionInstruction.innerText = "Instruction Set";
+                instrOptionsSelect.innerHTML = "";
+                instrOptionsSelect.appendChild(optionInstruction);
+
+                schemaDiv.innerHTML = "";
+            }
+
+            /* append new instruction options*/
+            function loadInstrOptions() {
+                var instrOptionsSelect = document.getElementById('showInstrOptions');
+                var instructionList = jsonSchema.instruction_templates;
+                var insCounter = 0;
+
+                if (Object.keys(instructionList).length > 0) {
+                    instrOptionsSelect[0].innerHTML = "Instruction Set (" + Object.keys(instructionList).length + ") ";
+                }
+                else
+                    return;
+
+                for (let i in instructionList) {
+                    var optionInstruction = document.createElement('option');
+
+                    insCounter += 1;
+                    optionInstruction.value = insCounter;
+                    optionInstruction.innerHTML = instructionList[i].name;
+                    instructionMap[insCounter] = instructionList[i].name;
+
+                    instrOptionsSelect.appendChild(optionInstruction);
+                    //$('#showInstrOptions').appendChild(optionInstruction);
+                }
+                instrOptionsSelect.addEventListener("change", handleNewInstructionSelect);
+                //$('#showInstrOptions').on("click", handleNewInstructionSelect);
+            }
+
+            /* Update user input field if user selects an instruction option or a line*/
+            function handleNewInstructionSelect(evt) {
+                var selectedInstr = instructionMap[evt.target.value];
+
+                if (typeof selectedInstr == "string" && selectedInstr != "...") {
+                    document.getElementById("editableFields").innerHTML = "";
+                    prepareEditableFields(true, selectedInstr, null);
+                }
+                else {
+                    document.getElementById("userInput").value = null;
+                    document.getElementById("editableFields").innerHTML = "";
+                }
+            }
+
+            function loadselectedInstructionLine(indexOfLine) {
+                var instructionName;
+                var segmentOptStr;
+
+                if (programLines[indexOfLine].length > 0) {
+                    instructionName = programLines[indexOfLine].substring(0, programLines[indexOfLine].indexOf(" "));
+                    segmentOptStr = programLines[indexOfLine].substring(programLines[indexOfLine].indexOf(" ") + 1, programLines[indexOfLine].length);
+                    //console.log("Load while line: " + programLines[indexOfLine]);
+                    //console.log("Load instructionName: " + instructionName);
+                    //console.log("Load segmentOptions: " + segmentOptions);
+                    document.getElementById("editableFields").innerHTML = "";
+                    prepareEditableFields(false, instructionName, segmentOptStr);
+                } else {
+                    document.getElementById("userInput").value = null;
+                    document.getElementById("editableFields").innerHTML = "";
+                }
+                
+            }
+
+            function prepareEditableFields(isNewInstruction, selectedInstr, segmentOptStr) {
+                var instructionList = jsonSchema.instruction_templates;
+                var instrInputField = document.getElementById("userInput");
+                var editableFields = document.getElementById("editableFields");
+
+                for (let i in instructionList) {
+                    if (instructionList[i].name == selectedInstr) {
+                        //console.log("Match name: " + instructionList[i].name);
+                        var segmentList = instructionList[i].segment_templates;
+                        var segmentOptionArray;
+                        var segmentOptionObject = {};
+                        var segmentCounter = 0;
+
+                        currentSelectedInstr = instructionList[i].name + " ";
+                        instrInputField.value = currentSelectedInstr;
+
+                        if (!isNewInstruction) {
+                            instrInputField.value += segmentOptStr;
+                            segmentOptionArray = segmentOptStr.split(', ');
+                            for (var counter = 0; counter < segmentOptionArray.length; counter += 1) {
+                                var segmentPair = segmentOptionArray[counter].split('=');
+                                segmentOptionObject[String(segmentPair[0])] = segmentPair[1];
+                            }
+                        }
+
+                        for (let j in segmentList) {
+                            /*  append the following block for each segment to collapse (id = editableFields) */
+                            /*
+                                  <div class="input-group my-2 input-group-sm">
+                                       <div class="input-group-prepend">
+                                           <span class="input-group-text">Field 2</span>
+                                       </div>
+                                       <input type="text" class="form-control" placeholder="">
+                                   </div>
+                            */
+                            var isControllable = segmentList[j].controllable; //type = undefined or boolean; content = undefined or true/false
+                            //console.log("isControllable(" + typeof isControllable + "): " + isControllable);
+
+                            var isObservable = segmentList[j].observable; //type = undefined or boolean; content = undefined or true/false
+                            //console.log("isObservable(" + typeof isObservable + "): " + isObservable);
+
+                            var default_value = segmentList[j].default_val; //type = undefined or number; content = undefined or digits
+                            //console.log("default_val(" + typeof default_value + "): " + default_value);
+
+                            var verboMap = segmentList[j].verbo_map;//type = undefined or object; content = undefined or [object Object],[object Object],[object Object],[object Object]
+                            //console.log("verbo_map(" + typeof verboMap + "): " + verboMap);
+                            if (typeof verboMap != "undefined") {
+                                for (var k = 0; k < verboMap.length; k++) {
+                                    console.log("verbo_pair(" + typeof verboMap[k] + "): " + verboMap[k]);
+                                    console.log("verbo_key(" + typeof verboMap[k].key + "): " + verboMap[k].key);
+                                    console.log("verbo_value(" + typeof verboMap[k].val + "): " + verboMap[k].val);
+                                }
+                            }
+
+                            if (typeof isControllable != "undefined") {
+                                if (isControllable == false) {
+                                    continue;
+                                }
+                            }
+
+                            if (typeof isObservable != "undefined") {
+                                if (isObservable == false) {
+                                    continue;
+                                }
+                            }
+
+                            var divInputGroup = document.createElement('div');
+                            divInputGroup.className = "input-group my-2 input-group-sm";
+
+                            var divPrepend = document.createElement('div');
+                            divPrepend.className = "input-group-prepend";
+
+                            var spanSegName = document.createElement('span');
+                            spanSegName.className = "input-group-text";
+                            spanSegName.innerText = segmentList[j].name;
+
+                            divPrepend.appendChild(spanSegName);
+                            divInputGroup.appendChild(divPrepend);
+
+                            var inputSegmentValue = document.createElement('input');
+                            inputSegmentValue.className = "form-control";
+                            inputSegmentValue.type = "text";
+
+                            if (segmentList[j].bitwidth == "1")
+                                inputSegmentValue.placeholder = "1 bit";
+                            else
+                                inputSegmentValue.placeholder = segmentList[j].bitwidth + " bits";
+
+                            if (typeof verboMap != "undefined") {
+                                for (var k = 0; k < verboMap.length; k++) {
+                                    inputSegmentValue.title += verboMap[k].key + " : " +verboMap[k].val + "\n"
+                                }
+                            }
+
+                            if (typeof default_value != "undefined") {
+                                inputSegmentValue.value = default_value;
+                            }
+
+                            if (!isNewInstruction) {
+                                var segValue = segmentOptionObject[segmentList[j].name];
+                                if(typeof segValue != "undefined")
+                                    inputSegmentValue.value = segValue;
+                            }
+                            segmentCounter += 1;
+                            divInputGroup.appendChild(inputSegmentValue);
+                            editableFields.appendChild(divInputGroup);
+                        }
+
+                        /*
+                        <button class="btn btn-secondary btn-sm" type="button" onClick="completeInput()">
+                           OK
+                        </button>
+                        */
+                        var buttonCompleteInput = document.createElement('button');
+                        var buttonClearInput = document.createElement('button');
+
+                        buttonCompleteInput.innerText = "OK";
+                        buttonCompleteInput.className = "btn btn-secondary btn-sm";
+                        buttonCompleteInput.type = "button";
+                        buttonCompleteInput.setAttribute('onclick', 'completeInput()');
+
+                        buttonClearInput.innerText = "Clear";
+                        buttonClearInput.className = "btn btn-secondary btn-sm";
+                        buttonClearInput.type = "button";
+                        buttonClearInput.setAttribute('onclick', 'clearInput()');
+                        buttonClearInput.style.margin = "0 0 0 5px";
+
+                        editableFields.appendChild(buttonCompleteInput);
+                        editableFields.appendChild(buttonClearInput);
+                        document.getElementById("buttonEdit").innerHTML = "EDIT(" + segmentCounter + ")";
+                        break;
+                    }
+                }
+            }
+
+            function clearInput() {
+                var editableFields = document.getElementById("editableFields");
+                var inputCollection = editableFields.querySelectorAll('.form-control');//get input value
+                var counts = 0;
+
+                for (; counts < inputCollection.length; counts += 1) {
+                    inputCollection[counts].value = null;
+                }
+            }
+
+            /*generate instruction line with user input*/
+            function completeInput() {
+                var instrInputField = document.getElementById("userInput");
+                var editableFields = document.getElementById("editableFields");
+                var segCollection = editableFields.querySelectorAll('.input-group-text');//get segName
+                var inputCollection = editableFields.querySelectorAll('.form-control');//get input value
+                var allSegmentName = new Array(segCollection.length);
+                var allSegmentValue = new Array(inputCollection.length);
+                var allSegmentBitwidth = new Array(inputCollection.length);
+                var userInputString = "";
+                var digitPattern = /^[0-9]*$/;
+                var counts;
+
+
+                counts = 0;
+                for (; counts < segCollection.length; counts += 1) {
+                    var bitwidthStr = inputCollection[counts].getAttribute('placeholder');
+
+                    allSegmentName[counts] = segCollection[counts].innerText;
+                    allSegmentValue[counts] = inputCollection[counts].value;
+                    allSegmentBitwidth[counts] = Number(bitwidthStr.substring(0, bitwidthStr.indexOf(" ")));
+                }
+
+                counts = 0;
+                for (; counts < allSegmentName.length; counts += 1) {
+                    if (typeof allSegmentValue[counts] != "undefined" && allSegmentValue[counts] != "") {
+                        if (digitPattern.test(allSegmentValue[counts])) {
+                            var value = Number(allSegmentValue[counts]);
+                            if (value >= 0 && value < Math.pow(2, allSegmentBitwidth[counts])) {
+                                userInputString += allSegmentName[counts] + "=" + allSegmentValue[counts] + ", ";
+                            }
+                            else {
+                                alert("Invalid input: '" + allSegmentName[counts] + "=" + allSegmentValue[counts] + "' (out of range)");
+                                return;
+                            }
+                        }
+                        else {
+                            alert("Must input positive number: '" + allSegmentName[counts] + "=" + allSegmentValue[counts] + "'");
+                            return;
+                        }
+                    }
+                }
+
+                if (userInputString.length > 0) {
+                    instrInputField.value = currentSelectedInstr + userInputString.substring(0, userInputString.length - 2);
+                }
+
+                console.log("Refresh: " + document.getElementById("userInput").value);
+            }
+
+            /* append user input into programming area*/
+            function insertUserInput(isEnter) {
+                var instrInputField = document.getElementById("userInput");
+                var textareaProgramFields = document.getElementById("programFields");
+                let validInstr = true;
+
+                if (!isEnter) {
+                    if (instrInputField.value == "")
+                        return;
+
+                    if (instrInputField.value == currentSelectedInstr) {
+                        //user doesn't assign value to any segment
+                        var instructionList = jsonSchema.instruction_templates;
+                        for (let i in instructionList) {
+                            if (instructionList[i].name == currentSelectedInstr.substring(0, currentSelectedInstr.length - 1)) {
+                                //console.log(instructionList[i].name);
+                                //console.log(Object.keys(instructionList[i].segment_templates).length);
+                                if (Object.keys(instructionList[i].segment_templates).length > 0) {
+                                    validInstr = false;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (validInstr) {
+                    var insertContent = "";
+                    var insertToTail = textareaWl == (programLines.length - 1);
+                    //1. get working line and insert to the next line
+                    //var lineNumberStr = getLineNumberString(textareaWl + 1);
+
+                    //2. prepare content
+                    if (!isEnter) {
+                        insertContent = instrInputField.value;
+                    }
+
+                    //3. confirm insert position
+                    //if (confirm('Insert line: "' + lineNumberStr + '   ' + insertContent + '"?')) {
+                        var opCode = 1;
+                        //4. reorganizeProgramArray
+                        reorganizeProgramArray(opCode, insertToTail, insertContent);
+                        //5. repaintTextarea
+                        repaintTextarea(insertToTail);
+                        //6. recalculateLineEndPosition
+                        
+                        recalculateLineEndPosition(opCode, insertToTail, (insertContent.length + 9));
+
+                        if (insertToTail) {
+                            //7.update working line
+                            updateSpanWl(programLines.length - 1);
+                            //8.adjust window put the insert line in the middle or to the end
+                            textareaProgramFields.scrollTop = textareaProgramFields.scrollHeight;
+                        } else {
+                            updateSpanWl(textareaWl + 1);
+                        }
+                    //}
+
+                    console.log("Insert: " + instrInputField.value);
+                }
+            }
+
+            function modifyUserSelect() {
+                var instrInputField = document.getElementById("userInput");
+                var textareaProgramFields = document.getElementById("programFields");
+                let validInstr = true;
+
+                if (instrInputField.value == "")
+                    return;
+
+                if (instrInputField.value == currentSelectedInstr) {
+                    //user doesn't assign value to any segment
+                    var instructionList = jsonSchema.instruction_templates;
+                    for (let i in instructionList) {
+                        if (instructionList[i].name == currentSelectedInstr.substring(0, currentSelectedInstr.length - 1)) {
+                            //console.log(instructionList[i].name);
+                            //console.log(Object.keys(instructionList[i].segment_templates).length);
+                            if (Object.keys(instructionList[i].segment_templates).length > 0) {
+                                validInstr = false;
+                            }
+                        }
+                    }
+                }
+
+                if (validInstr) {
+                    var substituteContent = instrInputField.value;
+                    var selectedContent = programLines[textareaWl];
+                    //1. get working line and insert to the next line
+                    var lineNumberStr = getLineNumberString(textareaWl);
+
+                    //2. prepare content
+                     
+
+                    //3. confirm insert position
+                    if (confirm('Modify line: "' + lineNumberStr + '   ' + selectedContent + '"?')) {
+                        var opCode = 3;
+                        //4. reorganizeProgramArray
+                        reorganizeProgramArray(opCode, false, substituteContent);
+                        //5. repaintTextarea
+                        repaintTextarea(false);
+                        //6. recalculateLineEndPosition
+
+                        recalculateLineEndPosition(opCode, false, (substituteContent.length - selectedContent.length));
+                    }
+                }
+            }
+
+            function deleteUserSelect() {
+                var textareaProgramFields = document.getElementById("programFields");
+                var targetContent;
+
+                if (programLines.length < 2 || textareaWl < 1) {//do nothing if textarea is empty
+                    return;
+                }
+
+                //console.log("textareaWl: " + textareaWl);
+                //console.log("programLineEndPos: " + programLineEndPos);
+                //Get the content to be deleted. 
+                targetContent = textareaProgramFields.value.substring(programLineEndPos[textareaWl - 1] + 1, programLineEndPos[textareaWl]);
+
+                if (confirm('Delete line: "' + targetContent + '"?')) {
+                    var opCode = 2;
+                    //console.log("program length BEFORE: " + (programLines.length - 1));
+                    reorganizeProgramArray(opCode, false, null);
+                    //console.log("program length AFTER: " + (programLines.length - 1));
+
+                    //console.log("textarea BEFORE: " + textareaProgramFields.value);
+                    repaintTextarea(false);
+                    //console.log("textarea AFTER: " + textareaProgramFields.value);
+
+                    //console.log("textarea BEFORE: " + programLineEndPos);
+                    recalculateLineEndPosition(opCode, false, targetContent.length);
+                    //console.log("textarea AFTER: " + programLineEndPos);
+
+                    if (textareaWl >= programLines.length) {//move the working line to the new last line if the last line was deleted.
+                        updateSpanWl(programLines.length - 1);
+                    }
+                }
+            }
+
+        /*
+        In the text editor for instructions, three types of button are provided for operations of inserting, modifying and deleting an instruction line. 
+        The operation of inserting is divided into two buttons. One is for inserting an instruction line from user input field and another is for inserting an empty line.
+        Before each operation, user need to specify a line which the operation should perform on by clicking on a specific line and the content of that line will be loaded into the user inout field.
+        Then the user can choose to 1.insert a new instruction line or an empty line after the selected line, 2.modify the selected line, 3. delete the selected line.
+        Insert a new instruction line: 
+            1. select instruction, 
+            2. click EDIT button to get the input form of segments, 
+            3. fill up value of segment based on needs and click OK to confirm and generate an instruction line loaded into user input field,
+            4. click INSERT button and then the new instruction will be added to the next line of the selected line.
+        Insert an empty line: click ENTER button and an empty line will be added to the next line of the selected line.
+        Modify the selected line:
+            1. select instruction 
+            2. click EDIT button to get the input form of segments, 
+            3. fill up value of segment based on needs and click OK to confirm and generate an instruction line loaded into user input field,
+            4. click MODIFY button and then the selected line will be replaced by the new instruction line.
+        Delete the selected line: click DELETE button and the selected line will be removed and the lines after the deleted one will be move one line up.
+        */
+            function handleClickOnTextarea() {
+                var ta = document.getElementById("programFields");//ta: textarea
+                var lineCounter = 1;
+
+                console.log(ta.selectionStart + ":" + ta.selectionEnd);
+                if (ta.selectionStart == 0 && programLineEndPos.length > 1) {
+                    updateSpanWl(1);
+                    loadselectedInstructionLine(1);
+                    return;
+                }
+
+                if (ta.selectionStart > programLineEndPos[programLineEndPos.length - 1]) {
+                    lineCounter = programLineEndPos.length - 1;
+                    updateSpanWl(lineCounter);
+                    loadselectedInstructionLine(lineCounter);
+                    return;
+                }
+
+                for (; lineCounter < programLineEndPos.length; lineCounter += 1) {
+                    if (ta.selectionStart > programLineEndPos[lineCounter - 1] && ta.selectionStart <= programLineEndPos[lineCounter]) {
+                        updateSpanWl(lineCounter);
+                        loadselectedInstructionLine(lineCounter);
+                        break;
+                    }
+                }
+            }
+
+            function reorganizeProgramArray(operation, isTail, newContent) {
+                if (isTail) {
+                    programLines[programLines.length] = newContent;
+                }
+                else {
+                    switch (operation) {
+                        case 1://insert
+                            programLines.splice(textareaWl + 1, 0, newContent);
+                            break;
+                        case 2://delete
+                            programLines.splice(textareaWl, 1);
+                            break;
+                        case 3://modify
+                            programLines[textareaWl] = newContent;
+                            break;
+                    }
+                }
+            }
+
+            function repaintTextarea(isTail) {
+                var textareaProgramFields = document.getElementById("programFields");
+                if (isTail) {
+                    textareaProgramFields.value += getLineNumberString(textareaWl + 1) + "   " + programLines.slice(-1) + '\n';
+                }
+                else {
+                    var counter = 1;
+                    textareaProgramFields.value = "";
+                    for (; counter < programLines.length; counter += 1) { //re-organize lines in textarea
+                        var lineNumberStr = getLineNumberString(counter);
+                        textareaProgramFields.value += lineNumberStr + "   " + programLines[counter] + '\n';
+                    }
+                }
+            }
+
+            function recalculateLineEndPosition(operation, isTail, lenDeviation) {
+                if (isTail)
+                    programLineEndPos[programLineEndPos.length] = document.getElementById("programFields").value.length - 1;
+                else {
+                    switch(operation){
+                        case 1://re-calculate the end position of lines from the last line to the inserted line
+                            //console.log("Insert lenDeviation: " + lenDeviation);
+                            for (var counter = programLineEndPos.length; counter > textareaWl; counter -= 1) {
+                                programLineEndPos[counter] = programLineEndPos[counter - 1] + lenDeviation;
+                            }
+                            break;
+                        case 2://re-calculate the end position of lines behind the deleted one and move them one step up
+                            for (var counter = textareaWl + 1; counter < programLineEndPos.length; counter += 1) {
+                                programLineEndPos[counter - 1] = programLineEndPos[counter] - lenDeviation - 1;
+                            }
+                            programLineEndPos.length = programLineEndPos.length - 1;
+                            break;
+                        case 3://re-calculate the end position of lines from the last line to the modified line
+                            for (var counter = programLineEndPos.length - 1; counter > textareaWl - 1; counter -= 1) {
+                                programLineEndPos[counter] = programLineEndPos[counter] + lenDeviation;
+                            }
+                            break;
+                    }                   
+                }
+            }
+
+            function updateSpanWl(newVal) {
+                var spanWl = document.getElementById("workingLine");
+                textareaWl = newVal;
+                console.log("Working on line: " + textareaWl);
+                spanWl.innerText = getLineNumberString(textareaWl);
+            }
+
+            function getLineNumberString(number){
+                var addzero = "";
+
+                if (number < 10) addzero = "0000";
+                else if (number < 100) addzero = "000";
+                else if (number < 1000) addzero = "00";
+                else if (number < 10000) addzero = "0";
+
+                return (addzero + String(number));
+            }
+
+
+            /************************************************End**********************************************************/
+
+
+            /*For testing purpose, to check if load correct json file (isa_v1.json) by displaying its content*/
+            /*
+            function showInstruction() {
+                var jsonObj = jsonSchema;
+                var pPlatform = document.createElement('p');
+                var pInstrBitwidth = document.createElement('p');
+                var pInstrCodeBitwidth = document.createElement('p');
+                var pBlockStartL1 = document.createElement('p');
+                var pBlockEndL1 = document.createElement('p');
+                var instructionList;
+
+                
+                pPlatform.innerHTML = "<pre>  &quot;platform&quot;: " + jsonObj.platform + "</pre>";
+                pInstrBitwidth.innerHTML = "<pre>  &quot;instr_bitwidth&quot;: " + jsonObj.instr_bitwidth + "</pre>";
+                pInstrCodeBitwidth.innerHTML = "<pre>  &quot;instr_code_bitwidth&quot;: " + jsonObj.instr_code_bitwidth + "</pre>";
+                pBlockStartL1.innerHTML = "<span><br/>{</span>";
+
+                schemaDiv.appendChild(pBlockStartL1);
+                schemaDiv.appendChild(pPlatform);
+                schemaDiv.appendChild(pInstrBitwidth);
+                schemaDiv.appendChild(pInstrCodeBitwidth);
+                instructionList = jsonObj.instruction_templates;
+
+                //console.log(typeof instructionList);
+
+                for (let i in instructionList) {
+                    var pBlockStartL2 = document.createElement('p');
+                    var pBlockEndL2 = document.createElement('p');
+                    var pInsCode = document.createElement('p');
+                    var pInsName = document.createElement('p');
+                    var pInsPhase = document.createElement('p');
+                    var pInsMaxChunk = document.createElement('p');
+                    var divInstructionItem = document.createElement('div');
+                    var segmentList;
+
+                    //console.log("ins: " + i);
+                    pBlockStartL2.innerHTML = "<pre><span>  [</span></pre>";
+                    pInsCode.innerHTML = "<pre>    &quot;code&quot;: " + instructionList[i].code + "</pre>";
+                    pInsName.innerHTML = "<pre>    &quot;name&quot;: " + instructionList[i].name + "</pre>";
+                    pInsPhase.innerHTML = "<pre>    &quot;phase&quot;: " + instructionList[i].phase + "</pre>";
+                    pInsMaxChunk.innerHTML = "<pre>    &quot;max_chunk&quot;: " + instructionList[i].max_chunk + "</pre>";
+
+                    divInstructionItem.appendChild(pBlockStartL2);
+                    divInstructionItem.appendChild(pInsCode);
+                    divInstructionItem.appendChild(pInsName);
+                    divInstructionItem.appendChild(pInsPhase);
+                    divInstructionItem.appendChild(pInsMaxChunk);
+
+                    segmentList = instructionList[i].segment_templates;
+
+                    for (let j in segmentList) {
+                        var pBlockStartL3 = document.createElement('p');
+                        var pBlockEndL3 = document.createElement('p');
+                        var pSegId = document.createElement('p');
+                        var pSegName = document.createElement('p');
+                        var pSegBitwidth = document.createElement('p');
+                        var divSegmentItem = document.createElement('div');
+
+                        //console.log("seg: " + j);
+                        pBlockStartL3.innerHTML = "<pre><span>    {</span></pre>";
+                        pSegId.innerHTML = "<pre>      &quot;id&quot;: " + segmentList[j].id + "</pre>";
+                        pSegName.innerHTML = "<pre>      &quot;name&quot;: " + segmentList[j].name + "</pre>";
+                        pSegBitwidth.innerHTML = "<pre>      &quot;bitwidth&quot;: " + segmentList[j].bitwidth + "</pre>";
+
+                        divSegmentItem.appendChild(pBlockStartL3);
+                        divSegmentItem.appendChild(pSegId);
+                        divSegmentItem.appendChild(pSegName);
+                        divSegmentItem.appendChild(pSegBitwidth);
+
+                        pBlockEndL3.innerHTML = "<pre><span>    }</span></pre>";
+                        divSegmentItem.appendChild(pBlockEndL3);
+                        divInstructionItem.appendChild(divSegmentItem);
+                    }
+                    pBlockEndL2.innerHTML = "<pre><span>  ]</span></pre>";
+                    divInstructionItem.appendChild(pBlockEndL2)
+                    schemaDiv.appendChild(divInstructionItem);
+                }
+                pBlockEndL1.innerHTML = "<span>}</span>";
+                schemaDiv.appendChild(pBlockEndL1);
+            }
+            */
+
+
+    </script>
+</body>
+</html>
