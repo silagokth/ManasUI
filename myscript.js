@@ -1,8 +1,9 @@
 /*
-In this version(v0.0.0_beta), program lines are organized and displayed in order.
+In this version(0.0.1), program lines are organized and displayed in order.
 (perhaps describing some functionality here...)
 However, a unordered list might be more appropriated to organize program lines because they don't need to be in order.
 Thus, we don't need to calculate position for each line in textarea.
+So I will switch to v0.0.2.
 */
 
             //Store the json content as an object
