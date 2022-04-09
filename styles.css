@@ -37,7 +37,6 @@
 }
 
 /*******************************left console*****************************************/
-
 /*------------canvas--------------*/
 #instrPlotCanvas {
     overflow: scroll;
@@ -52,22 +51,40 @@
 }
 /*------------code division--------------*/
 #code-division {
-    margin-top: 5px;
     margin-bottom: 5px;
 }
 
 #cellUnitContainer {
-    overflow-y: scroll !important;
-    max-height: 300px !important;
+    overflow: scroll;
+    -ms-overflow-style: none; /* IE and Edge */
+    width: inherit;
+    height: 500px;
+    border: 1px solid
 }
 
-li.list-group-item {
+#cellUnitContainer::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+}
+
+#cellUnitContainer .row {
+    margin-bottom: 5px;
+}
+
+#cellUnitContainer .list-group {
+    width: 100%;
+}
+
+#cellUnitContainer .list-group-item {
+    width: 100%;
+}
+
+li.list-group-item_disable {
     height: 24px;
     padding: 0 10px;
     border: 0 none;
 }
 
-ul.list-group {
+ul.list-group_disable {
     margin-bottom: 5px;
 }
 

@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
@@ -32,7 +32,7 @@
                             </a>
                         </li>
                         <li>
-                            <a href="nameCollection.html" class="nav-link text-white">
+                            <a href="manasUI.html" class="nav-link text-white">
                                 Name
                             </a>
                         </li>
@@ -60,20 +60,6 @@
                         </div>
                         <div id="diagram" class="mermaid">
 
-                        </div>
-                    </div>
-
-                    <div id="code-division">
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonCodeDivision" data-toggle="collapse" data-target="#codeContentField" aria-expanded="false" aria-controls="codeContentField">
-                            .CODE
-                        </button>
-                        <div class="collapse border-secondary" id="codeContentField">
-                            <div class="d-flex flex-row-reverse">
-                                <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonRefreshCodeContent" onClick="refreshCodeObject()">Refresh</button>
-                            </div>
-                            <div class="container" id="cellUnitContainer">
-
-                            </div>
                         </div>
                     </div>
 
@@ -211,7 +197,11 @@
 
                 </div>
                 <div class="col-md-6">
-                    <textarea id="programFields" onClick="handleClickOnTextarea()" readonly></textarea>
+                    <div id="code-division">
+                        <div class="container" id="cellUnitContainer">
+
+                        </div>
+                    </div>
 
                     <select id="showInstrOptions" class="form-select form-select-sm" aria-label=".form-select-sm example">
                         <option value="0">Instruction Set</option>
@@ -219,7 +209,7 @@
 
                     <div class="input-group input-group-sm mb-3" id="instrInputGroup">
                         <div class="input-group-prepend">
-                            <span class="input-group-text" id="workingLine">00000</span>
+                            <span class="input-group-text" id="workingLine">0000</span>
                         </div>
                         <div class="input-group-prepend">
                             <span class="input-group-text" id="cellUnit">&lt;-,-&gt;</span>
@@ -231,10 +221,9 @@
                         <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonEdit" data-toggle="collapse" data-target="#editableFields" aria-expanded="false" aria-controls="editableFields">
                             EDIT
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonInsert" onClick="insertUserInput(false)">INSERT</button>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonInsert" onClick="insertUserInput()">INSERT</button>
                         <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonModify" onClick="modifyUserSelect()">MODIFY</button>
                         <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonDelete" onClick="deleteUserSelect()">DELETE</button>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonEnter" onClick="insertUserInput(true)">ENTER</button>
                         <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonRunTest" onClick="handleRunTestProgram()" ondblclick="clearTestProgram()">RUN TEST</button>
                         <div class="collapse border-secondary" id="editableFields">
                         </div>

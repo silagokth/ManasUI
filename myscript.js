@@ -11,41 +11,42 @@ Thus, we don't need to calculate position for each line in textarea.
             const instructionMap = {};//{1: 'HALT', 2: 'REFI', 3: 'DPU', 4: 'SWB', 5: 'JUMP', 6: 'WAIT', 7: 'LOOP', 8: 'RACCU', 9: 'BRANCH', 10: 'ROUTE', 11: 'SRAM'}
             //Hold the current selected instruction
             let currentSelectedInstr = "";
-            //Record the order of all input lines in textarea
-            var programLines = ['\n'];
-            //Record the start position of each line
-            var programLineEndPos = [document.getElementById("programFields").value.length];
-            //save the current selected line number
+            //save the current selected instruction id
             let textareaWl = 0;
             //instruction id counter
-            let instrID = 0;
+            let instrID = 1;
+            //a list to store all program lines
+            var programManager = {};
 
             //CODE section
             var cellArray;
-            let cellInputToArray = "";
-            const cellAllocation = ['\n'];
+            let cellString = "";//"r,c"
 
             //RELATION section
             const relationObj = {};
-            const phaseObj = {};
+            const phaseObj = {};//{'HALT' : num, 'REFI': num, 'DPU' : num, ...}
             //DEPENDENCY section
 
             //a potential programLine class 
             class programLine {
-                segmentOptionObject = new Object;
+                constructor() {
+                    this.segmentOptionObject = {};
+                    this.isValid = false;
+                }
 
                 createLineFromUserInput(userInputArg) {
+                    if(!this.id) this.id = instrID++;
                     this.userInput = userInputArg;
                     this.name = this.userInput.substring(0, this.userInput.indexOf(" "));
                     this.phase = phaseObj[this.name];
-                    var segmentOptStr = this.userInput.substring(this.userInput.indexOf(" ") + 1, this.userInput.length);
-                    var segmentOptionArray = segmentOptStr.split(', ');
+                    this.segmentOptStr = this.userInput.substring(this.userInput.indexOf(" ") + 1, this.userInput.length);
+                    var segmentOptionArray = this.segmentOptStr.split(', ');
                     for (var counter = 0; counter < segmentOptionArray.length; counter += 1) {
                         var segmentPair = segmentOptionArray[counter].split('=');
                         this.segmentOptionObject[String(segmentPair[0])] = segmentPair[1];
                     }
                     //generate full line
-
+                    this.generateFullInstructionLine();
                 }
 
                 setCellPosition(rowArg, colArg) {
@@ -57,8 +58,59 @@ Thus, we don't need to calculate position for each line in textarea.
                     this.workingLine = wlArg;
                 }
 
-                setEndPosition(endPos) {
-                    this.endPosition = endPos;
+                setValid(val) {
+                    this.isvalid = val;
+                }
+
+                getIsValid() {
+                    return this.isValid;
+                }
+
+                getName() {
+                    return this.name;
+                }
+
+                getId() {
+                    return this.id;
+                }
+
+                getUserInput() {
+                    return this.userInput;//contain id
+                }
+
+                getSegmentOptionStr() {
+                    return this.segmentOptStr; //only segment values
+                }
+
+                getCellPosition() {
+                    return [this.row, this.column];
+                }
+
+                getFullLine() {
+                    return this.fullLine;
+                }
+
+                generateFullInstructionLine() {
+                    var instructionList = jsonSchema.instruction_templates;
+
+                    for (let i in instructionList) {
+                        if (instructionList[i].name == this.name) {
+                            var segmentList = instructionList[i].segment_templates;
+                            this.fullLine = instructionList[i].name;
+
+                            for (let j in segmentList) {
+                                var segValue = this.segmentOptionObject[segmentList[j].name];
+                                if (typeof segValue != "undefined") {
+                                    this.fullLine += " " + segValue;
+                                } else if (typeof segmentList[j].default_val != "undefined") {
+                                    this.fullLine += " " + segmentList[j].default_val;
+                                } else {
+                                    this.fullLine += " " + 0;
+                                }
+                            }
+                            break;
+                        }
+                    }
                 }
 
             }
@@ -68,7 +120,11 @@ Thus, we don't need to calculate position for each line in textarea.
             const schemaDiv = document.getElementById('schema');
 
             document.getElementById('inputFiles').addEventListener('change', handleFileSelect, false);
+            document.getElementById('cellUnitContainer').addEventListener('click', handleClickOnCellUnitContainer);
 
+            function initCell() {
+                cellArray = new Array(new Array(3), new Array(3));
+            }
 
             function initObjects() {
                 relationObj.ROOT = {};
@@ -103,6 +159,7 @@ Thus, we don't need to calculate position for each line in textarea.
                 jsonSchema = jsonObj;
                 clearContent();
                 initObjects();
+                initCell();
                 prepareInstructionInfo();
                 loadInstrOptions();
 
@@ -132,8 +189,6 @@ Thus, we don't need to calculate position for each line in textarea.
                     phaseObj[instructionList[i].name] = instructionList[i].phase;
                 }
             }
-
-
 
             /* append new instruction options */
             function loadInstrOptions() {
@@ -175,14 +230,16 @@ Thus, we don't need to calculate position for each line in textarea.
                 }
             }
 
-            function loadselectedInstructionLine(indexOfLine) {
-                if (programLines[indexOfLine].length > 0) {
-                    var instructionName = programLines[indexOfLine].substring(0, programLines[indexOfLine].indexOf(" "));
-                    var segmentOptStr = programLines[indexOfLine].substring(programLines[indexOfLine].indexOf(" ") + 1, programLines[indexOfLine].length);
-                    var cellPosition = cellAllocation[indexOfLine];
+            function loadselectedProgramLine(content) {
+                var lineId = Number(content.substring(0, 4));
+                var pLine = programManager[lineId];
+                if (pLine instanceof programLine) {
+                    var instructionName = pLine.getName();
+                    var segmentOptStr = pLine.getSegmentOptionStr();
+                    var cellPosition = pLine.getCellPosition();
 
                     document.getElementById("editableFields").innerHTML = "";
-                    prepareEditableFields(false, instructionName, segmentOptStr, cellPosition);
+                    prepareEditableFields(false, instructionName, segmentOptStr, cellPosition[0] + "," + cellPosition[1]);
                 } else {
                     document.getElementById("cellUnit").innerHTML = "<-,->"
                     document.getElementById("userInput").value = null;
@@ -198,7 +255,6 @@ Thus, we don't need to calculate position for each line in textarea.
 
                 for (let i in instructionList) {
                     if (instructionList[i].name == selectedInstr) {
-                        //console.log("Match name: " + instructionList[i].name);
                         var segmentList = instructionList[i].segment_templates;
                         var segmentOptionArray;
                         var segmentOptionObject = {};
@@ -449,9 +505,9 @@ Thus, we don't need to calculate position for each line in textarea.
                 var digitPattern = /^[0-9]*$/;
                 var counts;
 
-                cellInputToArray = cellCollection[0].value + "," + cellCollection[1].value;
+                cellString = cellCollection[0].value + "," + cellCollection[1].value;
 
-                cellUnitField.innerHTML = "<" + cellInputToArray + ">";
+                cellUnitField.innerHTML = "<" + cellString + ">";
 
                 counts = 0;
                 for (; counts < segCollection.length - 2; counts += 1) {
@@ -498,243 +554,50 @@ Thus, we don't need to calculate position for each line in textarea.
             }
 
             /* append user input into programming area*/
-            function insertUserInput(isEnter) {
-                var instrInputField = document.getElementById("userInput");
-                var textareaProgramFields = document.getElementById("programFields");
-                let validInstr = true;
+            function insertUserInput() {
+                var insertContent = document.getElementById("userInput").value;
+                let pLine = new programLine();
 
                 //validate the input
-                if (!isEnter) {
-                    if (instrInputField.value == "") {
-                        return;
-                    }
-
-                    if (instrInputField.value == currentSelectedInstr) {
-                        //user doesn't assign value to any segment
-                        var instructionList = jsonSchema.instruction_templates;
-                        for (let i in instructionList) {
-                            if (instructionList[i].name == currentSelectedInstr.substring(0, currentSelectedInstr.length - 1)) {
-                                //console.log(instructionList[i].name);
-                                //console.log(Object.keys(instructionList[i].segment_templates).length);
-                                if (Object.keys(instructionList[i].segment_templates).length > 0) {
-                                    validInstr = false;//or use default values????????????????????????????
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    cellInputToArray = "";
+                if (insertContent == "") {
+                    return;
                 }
 
-                if (validInstr) {
-                    var opCode = 1;
-                    var insertContent = "";
-                    var insertToTail = textareaWl == (programLines.length - 1);
-                    let pLine = new programLine();
-
-                    //prepare content
-                    if (!isEnter) {
-                        insertContent = instrInputField.value;
-                    }
-
-                    reorganizeProgramArray(opCode, insertToTail, insertContent);
-                    repaintTextarea(insertToTail);
-                    //pLine.setEndPosition() need to be done in recalculateLineEndPosition() since all lines after will be affected
-                    recalculateLineEndPosition(opCode, insertToTail, (insertContent.length + 9));
-                    pLine.createLineFromUserInput(insertContent);
-                    pLine.setCellPosition(Number(cellInputToArray[0]), Number(cellInputToArray[2]));
-                    pLine.setWorkingLine(textareaWl + 1);
-
-                    if (insertToTail) {
-                        updateSpanWl(programLines.length - 1);
-                        //adjust window put the insert line in the middle or to the end
-                        textareaProgramFields.scrollTop = textareaProgramFields.scrollHeight;
-                    } else {
-                        updateSpanWl(textareaWl + 1);
-                    }
-
-                    loadselectedInstructionLine(textareaWl);
-                    console.log("Insert: " + instrInputField.value);
-                }
+                pLine.createLineFromUserInput(insertContent);
+                pLine.setCellPosition(Number(cellString[0]), Number(cellString[2]));
+                programManager[pLine.getId()] = pLine;
+                appendNewLineToCellArray(pLine);
+                updateSpanWl(pLine.getId());
             }
 
             function modifyUserSelect() {
-                var instrInputField = document.getElementById("userInput");
-                var textareaProgramFields = document.getElementById("programFields");
-                let validInstr = true;
+                var substituteContent = document.getElementById("userInput").value;
+                let pLine = programManager[textareaWl];
 
-                if (instrInputField.value == "")
+                if (substituteContent == "")
                     return;
 
-                if (instrInputField.value == currentSelectedInstr) {
-                    //user doesn't assign value to any segment
-                    var instructionList = jsonSchema.instruction_templates;
-                    for (let i in instructionList) {
-                        if (instructionList[i].name == currentSelectedInstr.substring(0, currentSelectedInstr.length - 1)) {
-                            if (Object.keys(instructionList[i].segment_templates).length > 0) {
-                                validInstr = false;
-                            }
-                        }
-                    }
-                }
+                pLine.createLineFromUserInput(substituteContent);
+                pLine.setCellPosition(Number(cellString[0]), Number(cellString[2]));
 
-                if (validInstr) {
-                    var substituteContent = instrInputField.value;
-                    //prepare content
-                    var selectedContent = programLines[textareaWl];
-                    //get working line and insert to the next line
-                    var lineNumberStr = getLineNumberString(textareaWl);
-
-                    if (confirm('Modify line: "' + lineNumberStr + '   ' + selectedContent + '"?')) {
-                        var opCode = 3;
-                        reorganizeProgramArray(opCode, false, substituteContent);
-                        repaintTextarea(false);
-                        recalculateLineEndPosition(opCode, false, (substituteContent.length - selectedContent.length));
-                    }
+                if (confirm('Modify line: "' + getLineNumberString(pLine.getId()) + "  " + pLine.getUserInput() + '"?')) {
+                    programManager[pLine.getId()] = pLine;
+                    modifyLineFromCellArray(pLine);
                 }
             }
 
             function deleteUserSelect() {
-                var textareaProgramFields = document.getElementById("programFields");
-                var targetContent;
+                var instrInputField = document.getElementById("userInput");
+                let pLine = programManager[textareaWl];
 
-                if (programLines.length < 2 || textareaWl < 1) {//do nothing if textarea is empty
+                if (instrInputField.value == "")
                     return;
-                }
 
-                //console.log("textareaWl: " + textareaWl);
-                //console.log("programLineEndPos: " + programLineEndPos);
-                //Get the content to be deleted.
-                targetContent = textareaProgramFields.value.substring(programLineEndPos[textareaWl - 1] + 1, programLineEndPos[textareaWl]);
-
-                if (confirm('Delete line: "' + targetContent + '"?')) {
-                    var opCode = 2;
-                    //console.log("program length BEFORE: " + (programLines.length - 1));
-                    reorganizeProgramArray(opCode, false, null);
-                    //console.log("program length AFTER: " + (programLines.length - 1));
-
-                    //console.log("textarea BEFORE: " + textareaProgramFields.value);
-                    repaintTextarea(false);
-                    //console.log("textarea AFTER: " + textareaProgramFields.value);
-
-                    //console.log("textarea BEFORE: " + programLineEndPos);
-                    recalculateLineEndPosition(opCode, false, targetContent.length);
-                    //console.log("textarea AFTER: " + programLineEndPos);
-
-                    if (textareaWl >= programLines.length) {
-                        //move the working line to the new last line if the last line was deleted.
-                        updateSpanWl(programLines.length - 1);
-                    }
-
-                    loadselectedInstructionLine(textareaWl);
-                }
-            }
-
-        /*
-        In the text editor for instructions, three types of button are provided for operations of inserting, modifying and deleting an instruction line.
-        The operation of inserting is divided into two buttons. One is for inserting an instruction line from user input field and another is for inserting an empty line.
-        Before each operation, user need to specify a line which the operation should perform on by clicking on a specific line and the content of that line will be loaded into the user inout field.
-        Then the user can choose to 1.insert a new instruction line or an empty line after the selected line, 2.modify the selected line, 3. delete the selected line.
-        Insert a new instruction line:
-            1. select instruction,
-            2. click EDIT button to get the input form of segments,
-            3. fill up value of segment based on needs and click OK to confirm and generate an instruction line loaded into user input field,
-            4. click INSERT button and then the new instruction will be added to the next line of the selected line.
-        Insert an empty line: click ENTER button and an empty line will be added to the next line of the selected line.
-        Modify the selected line:
-            1. select instruction
-            2. click EDIT button to get the input form of segments,
-            3. fill up value of segment based on needs and click OK to confirm and generate an instruction line loaded into user input field,
-            4. click MODIFY button and then the selected line will be replaced by the new instruction line.
-        Delete the selected line: click DELETE button and the selected line will be removed and the lines after the deleted one will be move one line up.
-        */
-            function handleClickOnTextarea() {
-                var ta = document.getElementById("programFields");//ta: textarea
-                var lineCounter = 1;
-
-                console.log(ta.selectionStart + ":" + ta.selectionEnd);
-                if (ta.selectionStart == 0 && programLineEndPos.length > 1) {
-                    updateSpanWl(1);
-                    loadselectedInstructionLine(1);
-                    return;
-                }
-
-                if (ta.selectionStart > programLineEndPos[programLineEndPos.length - 1]) {
-                    lineCounter = programLineEndPos.length - 1;
-                    updateSpanWl(lineCounter);
-                    loadselectedInstructionLine(lineCounter);
-                    return;
-                }
-
-                for (; lineCounter < programLineEndPos.length; lineCounter += 1) {
-                    if (ta.selectionStart > programLineEndPos[lineCounter - 1] && ta.selectionStart <= programLineEndPos[lineCounter]) {
-                        updateSpanWl(lineCounter);
-                        loadselectedInstructionLine(lineCounter);
-                        break;
-                    }
-                }
-            }
-
-            function reorganizeProgramArray(operation, isTail, newContent) {
-                if (isTail) {
-                    programLines[programLines.length] = newContent;
-                    cellAllocation[cellAllocation.length] = cellInputToArray;
-                }
-                else {
-                    switch (operation) {
-                        case 1://insert
-                            programLines.splice(textareaWl + 1, 0, newContent);
-                            cellAllocation.splice(textareaWl + 1, 0, cellInputToArray);
-                            break;
-                        case 2://delete
-                            programLines.splice(textareaWl, 1);
-                            cellAllocation.splice(textareaWl, 1);
-                            break;
-                        case 3://modify
-                            programLines[textareaWl] = newContent;
-                            cellAllocation[textareaWl] = cellInputToArray;
-                            break;
-                    }
-                }
-            }
-
-            function repaintTextarea(isTail) {
-                var textareaProgramFields = document.getElementById("programFields");
-                if (isTail) {
-                    textareaProgramFields.value += getLineNumberString(textareaWl + 1) + "   " + programLines.slice(-1) + '\n';
-                }
-                else {
-                    var counter = 1;
-                    textareaProgramFields.value = "";
-                    for (; counter < programLines.length; counter += 1) { //re-organize lines in textarea
-                        var lineNumberStr = getLineNumberString(counter);
-                        textareaProgramFields.value += lineNumberStr + "   " + programLines[counter] + '\n';
-                    }
-                }
-            }
-
-            function recalculateLineEndPosition(operation, isTail, lenDeviation) {
-                if (isTail)
-                    programLineEndPos[programLineEndPos.length] = document.getElementById("programFields").value.length - 1;
-                else {
-                    switch(operation){
-                        case 1://re-calculate the end position of lines from the last line to the inserted line
-                            //console.log("Insert lenDeviation: " + lenDeviation);
-                            for (var counter = programLineEndPos.length; counter > textareaWl; counter -= 1) {
-                                programLineEndPos[counter] = programLineEndPos[counter - 1] + lenDeviation;
-                            }
-                            break;
-                        case 2://re-calculate the end position of lines behind the deleted one and move them one step up
-                            for (var counter = textareaWl + 1; counter < programLineEndPos.length; counter += 1) {
-                                programLineEndPos[counter - 1] = programLineEndPos[counter] - lenDeviation - 1;
-                            }
-                            programLineEndPos.length = programLineEndPos.length - 1;
-                            break;
-                        case 3://re-calculate the end position of lines from the last line to the modified line
-                            for (var counter = programLineEndPos.length - 1; counter > textareaWl - 1; counter -= 1) {
-                                programLineEndPos[counter] = programLineEndPos[counter] + lenDeviation;
-                            }
-                            break;
+                if (pLine instanceof programLine) {
+                    if (confirm('Delete line: "' + getLineNumberString(pLine.getId()) + "  " + pLine.getUserInput() + '"?')) {
+                        deleteLineFromCellArray(pLine.getCellPosition(), pLine.getId());
+                        delete programManager[textareaWl];
+                        instrInputField.value = "";
                     }
                 }
             }
@@ -749,84 +612,90 @@ Thus, we don't need to calculate position for each line in textarea.
             function getLineNumberString(number){
                 var addzero = "";
 
-                if (number < 10) addzero = "0000";
-                else if (number < 100) addzero = "000";
-                else if (number < 1000) addzero = "00";
-                else if (number < 10000) addzero = "0";
+                if (number < 10) addzero = "000";
+                else if (number < 100) addzero = "00";
+                else if (number < 1000) addzero = "0";
 
                 return (addzero + String(number));
             }
 
         /****************************************************CODE***********************************************************/
-            function refreshCodeObject() {
-                if (Object.keys(jsonSchema).length > 0) {
-                    initCell();
-                    prepareFullInstructionLine();
-                    prepareCodeContentField();
-                }
+            function handleClickOnCellUnitContainer(evt) {
+                evt = evt || window.event;
+                var target = evt.target || evt.srcElement, text = target.textContent || target.innerText;
+
+                updateSpanWl(Number(text.substring(0, 4)));
+                loadselectedProgramLine(text);
             }
 
-            function initCell() {
-                cellArray = new Array(new Array(3), new Array(3));
+            function appendNewLineToCellArray(newLine) {
+                var cellRow = newLine.getCellPosition()[0];
+                var cellColumn = newLine.getCellPosition()[1];
+                var lineObj = {};
+
+                if (typeof cellArray[cellRow][cellColumn] == "undefined") {
+                    cellArray[cellRow][cellColumn] = new Array();
+                }
+                lineObj["ID"] = getLineNumberString(newLine.getId());
+                lineObj["Content"] = newLine.getUserInput();
+                cellArray[cellRow][cellColumn].push(lineObj);
+                prepareCodeContentField();
             }
 
-            function prepareFullInstructionLine() {
-                var instructionList = jsonSchema.instruction_templates;
+            function modifyLineFromCellArray(newLine) {
+                var cellRow = newLine.getCellPosition()[0];
+                var cellColumn = newLine.getCellPosition()[1];
+                var newLineObj = {};
 
-                for (var count = 0; count < programLines.length; count++) {
-                    if (programLines[count].length < 1) {
-                        continue;//skip empty line
-                    }
-                    var instrName = programLines[count].substring(0, programLines[count].indexOf(" "));
-                    var segmentOptStr = programLines[count].substring(programLines[count].indexOf(" ") + 1, programLines[count].length);
-                    var cellRow = Number(cellAllocation[count][0]);
-                    var cellColumn = Number(cellAllocation[count][2]);
+                if (typeof cellArray[cellRow][cellColumn] == "undefined") {
+                    return;
+                }
 
+                newLineObj["ID"] = getLineNumberString(newLine.getId());
+                newLineObj["Content"] = newLine.getUserInput();
 
-                    for (let i in instructionList) {
-                        if (instructionList[i].name == instrName) {
-                            var segmentList = instructionList[i].segment_templates;
-                            var segmentOptionArray = segmentOptStr.split(', ');
-                            var segmentOptionObject = {};
-                            var currentLine = instructionList[i].name;
-
-
-                            for (var counter = 0; counter < segmentOptionArray.length; counter += 1) {
-                                var segmentPair = segmentOptionArray[counter].split('=');
-                                segmentOptionObject[String(segmentPair[0])] = segmentPair[1];
-                            }
-
-                            for (let j in segmentList) {
-                                var segValue = segmentOptionObject[segmentList[j].name];
-                                if (typeof segValue != "undefined") {
-                                    currentLine += " " + segValue;
-                                } else if (typeof segmentList[j].default_val != "undefined") {
-                                    currentLine += " " + segmentList[j].default_val;
-                                } else {
-                                    currentLine += " " + 0;
-                                }
-                            }
-
-                            if (typeof cellArray[cellRow][cellColumn] == "undefined") {
-                                cellArray[cellRow][cellColumn] = new Array();
-                            }
-                            cellArray[cellRow][cellColumn].push(currentLine);
-                            break;
-                        }
+                for (count = 0; count < cellArray[cellRow][cellColumn].length; count++) {
+                    var lineObj = cellArray[cellRow][cellColumn][count];
+                    if (lineObj.ID == newLineObj.ID) {
+                        cellArray[cellRow][cellColumn][count] = newLineObj;
+                        break;
                     }
                 }
+                prepareCodeContentField();
+            }
+
+            function deleteLineFromCellArray(cell, lineID) {
+                var cellRow = cell[0];
+                var cellColumn = cell[1];
+                var idStr = getLineNumberString(lineID);
+                if (typeof cellArray[cellRow][cellColumn] == "undefined") {
+                    return;
+                }
+
+                for (count = 0; count < cellArray[cellRow][cellColumn].length; count++) {
+                    var lineObj = cellArray[cellRow][cellColumn][count];
+                    if (lineObj.ID == idStr) {
+                        cellArray[cellRow][cellColumn].splice(count, 1);
+                        break;
+                    }
+                }
+                prepareCodeContentField();
             }
 
             function prepareCodeContentField() {
                 /*
                 <div class="container">
                   <div class="row">
-                    <ul class="list-group">
-                      <li class="list-group-item borderless">
-                        <p class="font-weight-bold">CELL<r,c></p>
-                      </li>
-                      <li class="list-group-item borderless"></li>
-                    </ul>
+                    <div class="list-group">
+                      <div class="list-group-item list-group-item-action flex-column align-items-start active">
+                        CELL<r,c>
+                      </div>
+
+                      <div class="list-group-item list-group-item-action flex-column align-items-start">
+                        <p>line 1</p>
+                      </div>
+                      ...
+                    </div>
                   </div>
                   <div class="row">...</div>
                   <div class="row">...</div>
@@ -840,32 +709,35 @@ Thus, we don't need to calculate position for each line in textarea.
                 for (var idx = 0; idx < 6; idx++) {
                     var row = parseInt(idx / 3);
                     var column = idx % 3;
-                    console.log(row +","+column);
-                    if (typeof cellArray[row][column] != "undefined") {
-                        var divCellUnit = document.createElement("div");
-                        divCellUnit.className = "row";
-                        var ulInstrLines = document.createElement("ul");
-                        ulInstrLines.className = "list-group";
-                        var liUnitName = document.createElement('li');
-                        liUnitName.className = "list-group-item borderless";
+                    if (typeof cellArray[row][column] != "undefined" && cellArray[row][column].length > 0) {
+                        var divCellUnitRow = document.createElement("div");
+                        divCellUnitRow.className = "row";
+                        var divCellListGroup = document.createElement("div");
+                        divCellListGroup.className = "list-group";
 
-                        var pUnitName = document.createElement('p');
-                        pUnitName.className = "font-weight-bold";
-                        pUnitName.innerHTML = "CELL <" + row + "," + column + ">";
-                        liUnitName.appendChild(pUnitName);
-                        ulInstrLines.appendChild(liUnitName);
+                        var divUnitName = document.createElement('div');
+                        divUnitName.className = "list-group-item align-items-start active";
+                        divUnitName.innerHTML = "CELL <" + row + "," + column + ">";
+                        divCellListGroup.appendChild(divUnitName);
 
                         for (count = 0; count < cellArray[row][column].length; count++) {
-                            var liInstrLine = document.createElement('li');
-                            liInstrLine.className = "list-group-item borderless";
-                            liInstrLine.innerHTML = cellArray[row][column][count];
-                            ulInstrLines.appendChild(liInstrLine);
+                            var lineObj = cellArray[row][column][count];
+                            var divInstrLine = document.createElement('div');
+                            divInstrLine.className = "list-group-item align-items-start";
+                            var spanInstrID = document.createElement('span');
+                            spanInstrID.className = "font-weight-bold";
+                            spanInstrID.innerHTML = lineObj.ID + "&nbsp;&nbsp;";
+                            divInstrLine.appendChild(spanInstrID);
+                            divInstrLine.innerHTML += lineObj.Content;
+                            divCellListGroup.appendChild(divInstrLine);
                         }
-                        divCellUnit.appendChild(ulInstrLines);
-                        divCodeField.appendChild(divCellUnit);
+                        divCellUnitRow.appendChild(divCellListGroup);
+                        divCodeField.appendChild(divCellUnitRow);
                     }
                 }
+
             }
+
         /**************************************************RELATION*********************************************************/
             function loadGroupUnitOptions() {
                 var groupOptionsSelect = document.getElementById('showGroupOptions');
@@ -937,7 +809,7 @@ Thus, we don't need to calculate position for each line in textarea.
 
             function refreshRelationObject() {
                 if (Object.keys(jsonSchema).length > 0) {
-                    refreshCodeObject();
+                    prepareCodeContentField();
                     loadRelation();
                     prepareRelationContentField();
                     loadGroupUnitOptions();
@@ -954,10 +826,11 @@ Thus, we don't need to calculate position for each line in textarea.
                     if (typeof cellArray[row][column] != "undefined") {
                         for (let count = 0; count < cellArray[row][column].length; count++) {
                             let nodeName = ""; //Op_row_col_count_phase
-                            let fullIns = cellArray[row][column][count];
-                            let phase = phaseObj[fullIns.substring(0, fullIns.indexOf(" "))];
+                            let lineContent = cellArray[row][column][count].Content;
+                            let lineId = Number(cellArray[row][column][count].ID);
+                            let phase = phaseObj[lineContent.substring(0, lineContent.indexOf(" "))];
                             for(let num = 1; num < Number(phase) + 1; num++){
-                                relationObj.ROOT.child0.push("Op_" + row + "_" + column + "_" + count + "_" + num);
+                                relationObj.ROOT.child0.push("Op_" + lineId + "_" + num);
                                 /*
                                 relationObj.LOOP0.child0.push("Op_" + row + "_" + column + "_" + count + "_" + num);
                                 relationObj.LOOP0_BODY.child0.push("Op_" + row + "_" + column + "_" + count + "_" + num);
@@ -1175,24 +1048,19 @@ Thus, we don't need to calculate position for each line in textarea.
 
                     prepareEditableFields(true, instructionMap[index], null, cellPos);
                     completeInput();
-                    insertUserInput(false);
+                    insertUserInput();
                 }
             }
 
             function clearTestProgram() {
                 if (confirm('Delete all program?')) {
-                    var textareaProgramFields = document.getElementById("programFields");
-                    var targetContent;
-
-                    if (programLines.length < 2 || textareaWl < 1) {//do nothing if textarea is empty
-                        return;
-                    }
-
-                    programLines = ['\n'];
-                    programLineEndPos = [document.getElementById("programFields").value.length];
+                    instrID = 1;
                     textareaWl = 0;
                     updateSpanWl(textareaWl);
-                    textareaProgramFields.value = "";
+                    programManager = {}
+                    initCell();
+                    initObjects();
+                    prepareCodeContentField();
                     document.getElementById("userInput").value = null;
                     document.getElementById("editableFields").innerHTML = "";
                 }
