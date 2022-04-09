@@ -1,7 +1,7 @@
 * {
     margin: 0
 }
-
+/*******************************right console*****************************************/
 #inputFiles {
     margin: 5px 10px 0 0;
     width: 300px;
@@ -19,7 +19,7 @@
     margin: 5px 0 5px 0;
 }
 
-#editableFields {
+.border-secondary {
     border: 1px solid;
     border-radius: 3px;
 }
@@ -36,6 +36,9 @@
     display: none; /* Chrome, Safari and Opera */
 }
 
+/*******************************left console*****************************************/
+
+/*------------canvas--------------*/
 #instrPlotCanvas {
     overflow: scroll;
     -ms-overflow-style: none; /* IE and Edge */
@@ -47,7 +50,72 @@
 #instrPlotCanvas::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
 }
+/*------------code division--------------*/
+#code-division {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
 
+#cellUnitContainer {
+    overflow-y: scroll !important;
+    max-height: 300px !important;
+}
+
+li.list-group-item {
+    height: 24px;
+    padding: 0 10px;
+    border: 0 none;
+}
+
+ul.list-group {
+    margin-bottom: 5px;
+}
+
+/*------------relation division--------------*/
+#relation-division {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+#nav-tabContent {
+    overflow-y: scroll !important;
+    height: 300px !important;
+}
+
+#nodeGroupUnit {
+    width: 100%;
+    display: block;
+}
+
+#v-pills-tab {
+    height: 300px;
+}
+
+#v-pills-tabContent {
+    margin: 5px 0px 2px 17px;
+}
+
+#deleteGroupElements {
+    margin: 7px 0px 0px 0px;
+}
+
+#showGroupOptions {
+    margin: 0px 5px 0px 0px;
+}
+
+#showSourceGroupOptions {
+    margin: 0px 5px 0px 0px;
+}
+/*------------dependency division--------------*/
+#dependency-division {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+/*----------------test plot--------------------*/
+.mermaidSpan {
+    display: block;
+}
 
 
 #schema {
