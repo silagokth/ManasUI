@@ -1,8 +1,5 @@
 /*
-In this version(v0.0.0_beta), program lines are organized and displayed in order.
-(perhaps describing some functionality here...)
-However, a unordered list might be more appropriated to organize program lines because they don't need to be in order.
-Thus, we don't need to calculate position for each line in textarea.
+This is version 0.0.2
 */
 
             //Store the json content as an object
@@ -27,7 +24,7 @@ Thus, we don't need to calculate position for each line in textarea.
             const phaseObj = {};//{'HALT' : num, 'REFI': num, 'DPU' : num, ...}
             //DEPENDENCY section
 
-            //a potential programLine class 
+            //a potential programLine class
             class programLine {
                 constructor() {
                     this.segmentOptionObject = {};
@@ -41,8 +38,8 @@ Thus, we don't need to calculate position for each line in textarea.
                     this.phase = phaseObj[this.name];
                     this.segmentOptStr = this.userInput.substring(this.userInput.indexOf(" ") + 1, this.userInput.length);
                     var segmentOptionArray = this.segmentOptStr.split(', ');
-                    for (var counter = 0; counter < segmentOptionArray.length; counter += 1) {
-                        var segmentPair = segmentOptionArray[counter].split('=');
+                    for (let count = 0; count < segmentOptionArray.length; count += 1) {
+                        var segmentPair = segmentOptionArray[count].split('=');
                         this.segmentOptionObject[String(segmentPair[0])] = segmentPair[1];
                     }
                     //generate full line
@@ -90,6 +87,14 @@ Thus, we don't need to calculate position for each line in textarea.
                     return this.fullLine;
                 }
 
+                getNodeArray() {
+                    let nodeArr = [];
+                    for (let count = 1; count < Number(this.phase) + 1; count++) {
+                        nodeArr.push("Op_" + this.getId() + "_" + count);
+                    }
+                    return nodeArr;
+                }
+
                 generateFullInstructionLine() {
                     var instructionList = jsonSchema.instruction_templates;
 
@@ -126,10 +131,10 @@ Thus, we don't need to calculate position for each line in textarea.
                 cellArray = new Array(new Array(3), new Array(3));
             }
 
-            function initObjects() {
-                relationObj.ROOT = {};
-                relationObj.ROOT.child0 = [];
-                relationObj.ROOT.child1 = [];
+            function initRelation() {
+                relationManager = {};
+                rootLoop = new LoopUnit("ROOT");
+                relationManager[rootLoop.getLoopName()] = rootLoop;
             }
 
             /* Load the selected file -> expected "isa.json" */
@@ -158,7 +163,7 @@ Thus, we don't need to calculate position for each line in textarea.
             function updateInstructionOptions(jsonObj) {
                 jsonSchema = jsonObj;
                 clearContent();
-                initObjects();
+                initRelation();
                 initCell();
                 prepareInstructionInfo();
                 loadInstrOptions();
@@ -258,7 +263,7 @@ Thus, we don't need to calculate position for each line in textarea.
                         var segmentList = instructionList[i].segment_templates;
                         var segmentOptionArray;
                         var segmentOptionObject = {};
-                        var segmentCounter = 0;
+                        var segmentCounter = 1;
 
                         currentSelectedInstr = instructionList[i].name + " ";
                         instrInputField.value = currentSelectedInstr;
@@ -276,16 +281,16 @@ Thus, we don't need to calculate position for each line in textarea.
                         /*Add select for cell<row,column>.
                         <div class="input-group mb-2 input-group-sm">
                                 <div class="input-group-prepend">
-                                    <label class="input-group-text">Row</label>
+                                    <label class="input-group-text" for="selectRow">Row</label>
                                 </div>
-                                <select class="custom-select" title="row">
+                                <select class="custom-select" id="selectRow" title="row">
                                     <option value="0">0</option>
                                     <option value="1">1</option>
                                 </select>
                                 <div class="input-group-prepend">
-                                    <label class="input-group-text">Column</label>
+                                    <label class="input-group-text" for="selectColumn">Column</label>
                                 </div>
-                                <select class="custom-select" title="column">
+                                <select class="custom-select" id="selectColumn" title="column">
                                     <option value="0">0</option>
                                     <option value="1">1</option>
                                     <option value="2">2</option>
@@ -416,13 +421,13 @@ Thus, we don't need to calculate position for each line in textarea.
                             inputSegmentValue.className = "form-control";
                             inputSegmentValue.type = "text";
 
-                            
+
                             if (segmentList[j].bitwidth == "1") {
                                 inputSegmentValue.setAttribute("widthLimit", "1 bit");
                             } else {
                                 inputSegmentValue.setAttribute("widthLimit", segmentList[j].bitwidth + " bits");
                             }
-                            
+
 
                             if (typeof comment != "undefined") {
                                 inputSegmentValue.title += comment + "\n";
@@ -549,7 +554,7 @@ Thus, we don't need to calculate position for each line in textarea.
                             }
                         }
                     }
-                    
+
                 }
             }
 
@@ -567,6 +572,7 @@ Thus, we don't need to calculate position for each line in textarea.
                 pLine.setCellPosition(Number(cellString[0]), Number(cellString[2]));
                 programManager[pLine.getId()] = pLine;
                 appendNewLineToCellArray(pLine);
+                appendNodeFromNewLine(pLine.getNodeArray());
                 updateSpanWl(pLine.getId());
             }
 
@@ -596,6 +602,8 @@ Thus, we don't need to calculate position for each line in textarea.
                 if (pLine instanceof programLine) {
                     if (confirm('Delete line: "' + getLineNumberString(pLine.getId()) + "  " + pLine.getUserInput() + '"?')) {
                         deleteLineFromCellArray(pLine.getCellPosition(), pLine.getId());
+                        deleteNodeAlongWithProgramLine(pLine.getNodeArray());
+                        deleteConstraintAlongWithProgramLine(pLine.getNodeArray());
                         delete programManager[textareaWl];
                         instrInputField.value = "";
                     }
@@ -738,137 +746,143 @@ Thus, we don't need to calculate position for each line in textarea.
 
             }
 
-        /**************************************************RELATION*********************************************************/
-            function loadGroupUnitOptions() {
-                var groupOptionsSelect = document.getElementById('showGroupOptions');
-                var srcGroupOptionsSelect = document.getElementById('showSourceGroupOptions');
-                var destGroupOptionsSelect = document.getElementById('showDestGroupOptions');
-                var parentGroupOptionsSelect = document.getElementById('showParentGroupOptions');
-                var insCounter = 0;
-                var keyArray = Object.keys(relationObj);
+/**************************************************RELATION*********************************************************/
+            var relationManager = {};
+            var nodeMap = {};
 
-                groupOptionsSelect.innerHTML = "";
-                srcGroupOptionsSelect.innerHTML = "";
-                destGroupOptionsSelect.innerHTML = "";
-                if (keyArray.length > 0) {
-                    for (let i = 0; i < keyArray.length; i++) {
-                        var optionGroupUnit = document.createElement('option');
-                        var optionSrcGroupUnit = document.createElement('option');
-                        var optionDestGroupUnit = document.createElement('option');
-                        var optionParentGroupUnit = document.createElement('option');
+            class NodeUnit {
+                constructor(nameArg, parentArg, childGroupArg) {
+                    this.name = nameArg;
+                    this.parent = parentArg;
+                    this.childGroup = childGroupArg;
+                }
 
-                        optionGroupUnit.value = i;
-                        optionGroupUnit.innerHTML = keyArray[i];
-                        optionSrcGroupUnit.value = i;
-                        optionSrcGroupUnit.innerHTML = keyArray[i];
-                        optionDestGroupUnit.value = i;
-                        optionDestGroupUnit.innerHTML = keyArray[i];
-                        optionParentGroupUnit.value = i;
-                        optionParentGroupUnit.innerHTML = keyArray[i];
+                setParent(parentArg) {
+                    this.parent = parentArg;
+                }
 
-                        groupOptionsSelect.appendChild(optionGroupUnit);
-                        srcGroupOptionsSelect.appendChild(optionSrcGroupUnit);
-                        destGroupOptionsSelect.appendChild(optionDestGroupUnit);
-                        parentGroupOptionsSelect.appendChild(optionParentGroupUnit);
+                setChildGroup(num) {
+                    if (num == 1)
+                        this.childGroup = 1;
+                    else
+                        this.childGroup = 0;
+                }
+
+                getName(){
+                    return this.name;
+                }
+
+                getParent(){
+                    return this.parent;
+                }
+
+                getChildGroup() {
+                    if (this.childGroup == 0)
+                        return "childNode0";
+                    else
+                        return "childNode1";
+                }
+            }
+
+            class LoopUnit {
+                constructor(nameArg) {
+                    this.name = nameArg;
+                    this.childLoop = [];
+                    this.parentLoop = [];
+                    this.childNode0 = [];
+                    this.childNode1 = [];
+                }
+
+                getLoopName() {
+                    return this.name;
+                }
+
+                setParentLoop(parent) {
+                    this.parentLoop.push(parent);
+                }
+
+                getParentLoop() {
+                    return this.parentLoop;
+                }
+
+                getChildLoop() {
+                    return this.childLoop;
+                }
+
+                getChildNode0() {
+                    return this.childNode0;
+                }
+
+                getChildNode1() {
+                    return this.childNode1;
+                }
+
+                getChildNode(whichGroup){
+                    if (whichGroup == "childNode0" || whichGroup == 0) {
+                        return this.childNode0;
+                    } else if (whichGroup == "childNode1" || whichGroup == 1) {
+                        return this.childNode1;
                     }
                 }
-                else {
-                    return;
-                }
-            }
 
-            function addGroupUnit() {
-                var addTab = document.getElementById("v-pills-add");
-                var newGroupUnit = addTab.querySelectorAll(".form-control");
-                var name = newGroupUnit[0].value;
-                var param1 = newGroupUnit[1].value;
-                var param2 = newGroupUnit[2].value;
-                
-                if (name.length > 0 && !(name in relationObj)) {
-                    relationObj[name] = {};
-                    relationObj[name].child0 = [];
-                    relationObj[name].child1 = [];
-                } else {
-                    alert("Please provide a valid name!");
+                appendLoop(loopName) {
+                    var index = this.childLoop.length;
+                    this.childLoop.push(loopName);
+                    this.childNode0.splice(index, 0, loopName);
                 }
 
-                prepareRelationContentField();
-                loadGroupUnitOptions();
-            }
-
-            function deleteGroupUnit() {
-                var selectDelete = document.getElementById("showGroupOptions");
-                if (selectDelete.value == 0) {
-                    return;
-                } else {
-                    delete relationObj[Object.keys(relationObj)[selectDelete.value]];
+                appendNode(nodeName, whereToAdd) {
+                    if (whereToAdd == "childNode0") {
+                        this.childNode0.push(nodeName);
+                    } else if (whereToAdd == "childNode1") {
+                        this.childNode1.push(nodeName);
+                    }
                 }
-                prepareRelationContentField();
-                loadGroupUnitOptions();
-            }
 
-            function refreshRelationObject() {
-                if (Object.keys(jsonSchema).length > 0) {
-                    prepareCodeContentField();
-                    loadRelation();
-                    prepareRelationContentField();
-                    loadGroupUnitOptions();
-                }
-            }
-
-            function loadRelation() {
-                relationObj.ROOT.child0 = [];
-                relationObj.ROOT.child1 = [];
-
-                for (let idx = 0; idx < 6; idx++) {
-                    var row = parseInt(idx / 3);
-                    var column = idx % 3;
-                    if (typeof cellArray[row][column] != "undefined") {
-                        for (let count = 0; count < cellArray[row][column].length; count++) {
-                            let nodeName = ""; //Op_row_col_count_phase
-                            let lineContent = cellArray[row][column][count].Content;
-                            let lineId = Number(cellArray[row][column][count].ID);
-                            let phase = phaseObj[lineContent.substring(0, lineContent.indexOf(" "))];
-                            for(let num = 1; num < Number(phase) + 1; num++){
-                                relationObj.ROOT.child0.push("Op_" + lineId + "_" + num);
-                                /*
-                                relationObj.LOOP0.child0.push("Op_" + row + "_" + column + "_" + count + "_" + num);
-                                relationObj.LOOP0_BODY.child0.push("Op_" + row + "_" + column + "_" + count + "_" + num);
-                                relationObj.LOOP1.child0.push("Op_" + row + "_" + column + "_" + count + "_" + num);
-                                relationObj.LOOP1_BODY.child0.push("Op_" + row + "_" + column + "_" + count + "_" + num);
-                                relationObj.LOOP2.child0.push("Op_" + row + "_" + column + "_" + count + "_" + num);
-                                relationObj.LOOP2_BODY.child0.push("Op_" + row + "_" + column + "_" + count + "_" + num);
-                                */
+                deleteNode(nodeName, whereToDelete) {
+                    if (whereToDelete == "childLoop") {
+                        for (let count = 0; count < this.childLoop.length; count++) {
+                            if (nodeName == this.childLoop[count]) {
+                                this.childLoop.splice(count, 1);
+                                break;
+                            }
+                        }
+                        for (count = 0; count < this.childNode0.length; count++) {
+                            if (nodeName == this.childNode0[count]) {
+                                this.childNode0.splice(count, 1);
+                                break;
+                            }
+                        }
+                    } else if (whereToDelete == "parentLoop") {
+                        for (let count = 0; count < this.parentLoop.length; count++) {
+                            if (nodeName == this.parentLoop[count]) {
+                                this.parentLoop.splice(count, 1);
+                                break;
+                            }
+                        }
+                    } else if (whereToDelete == "childNode0") {
+                        for (let count = 0; count < this.childNode0.length; count++) {
+                            if (nodeName == this.childNode0[count]) {
+                                this.childNode0.splice(count, 1);
+                                break;
+                            }
+                        }
+                    } else if (whereToDelete == "childNode1") {
+                        for (let count = 0; count < this.childNode1.length; count++) {
+                            if (nodeName == this.childNode1[count]) {
+                                this.childNode1.splice(count, 1);
+                                break;
                             }
                         }
                     }
                 }
-                console.log(relationObj);
             }
 
             function prepareRelationContentField() {
-                let keys = Object.keys(relationObj);
-                if (relationObj.ROOT.child0.length == 0) {
-                    return;
-                }
                 /*
                 <div class="container">
                   <div class="row">
-                    <ul class="list-group" id="nodeGroupList">
-                      <li class="list-group-item borderless" id="nodeGroupUnit">
-                        <p id="unitName"></p>
-                      </li>
-                      <li class="list-group-item borderless"></li>
-                      ...
-                    </ul>
-                  </div>
-                </div>
-                */
-
-                /*
-                <div class="container">
-                  <div class="row">
-                    <div id="nodeGroupUnit">
+                    <div id="nodeLoopBlock">
                       <p id="unitName"></p>
                       <p id="unitLine"></p>
                       ...
@@ -878,123 +892,550 @@ Thus, we don't need to calculate position for each line in textarea.
                 */
                 var divRelationField = document.getElementById("relationArrayContainer");
                 divRelationField.innerHTML = "";
-                
+
                 var divLayoutRow = document.createElement("div");
                 divLayoutRow.className = "row";
 
-                //var divNodeGroupList = document.createElement("div");
-                
+                let keys = Object.keys(relationManager);
                 for (let count = 0; count < keys.length; count++) {
                     let i = 0;
                     let memberStr = "";
-                    let lineLimit = 6;
-                    var divNodeGroupUnit = document.createElement('div');
-                    divNodeGroupUnit.id = "nodeGroupUnit";
-                    
-                    var pGroupName = document.createElement('p');
-                    pGroupName.className = "font-weight-bold";
-                    pGroupName.innerHTML = keys[count] + "\n";
+                    let lineLimit = 8;
+                    var divNodeLoopBlock = document.createElement('div');
+                    divNodeLoopBlock.id = "nodeLoopBlock";
 
-                    divNodeGroupUnit.appendChild(pGroupName);
+                    var pLoopName = document.createElement('p');
+                    pLoopName.className = "font-weight-bold";
+                    pLoopName.innerHTML = keys[count] + "\n";
 
-                    var pGroupMemberLine = document.createElement('p');
+                    divNodeLoopBlock.appendChild(pLoopName);
+
+                    var pLoopMemberLine = document.createElement('p');
 
                     //child0
-                    if (relationObj[keys[count]].child0.length > lineLimit) {
+                    let child0Arr = relationManager[keys[count]].getChildNode0();
+                    if (child0Arr.length > lineLimit) {
                         memberStr = "[ ";
                         for (i = 0; i < lineLimit; i++) {
-                            memberStr += relationObj[keys[count]].child0[i] + ", ";
+                            memberStr += child0Arr[i] + ", ";
                         }
-                        
-                        for (; i < relationObj[keys[count]].child0.length; i++) {
-                            if (i % lineLimit == 0 && i < relationObj[keys[count]].child0.length) {
-                                pGroupMemberLine.innerHTML = memberStr;
-                                divNodeGroupUnit.appendChild(pGroupMemberLine);
+
+                        for (; i < child0Arr.length; i++) {
+                            if (i % lineLimit == 0 && i < child0Arr.length) {
+                                pLoopMemberLine.innerHTML = memberStr;
+                                divNodeLoopBlock.appendChild(pLoopMemberLine);
                                 memberStr = "&nbsp;&nbsp;";
-                                pGroupMemberLine = document.createElement('p');
+                                pLoopMemberLine = document.createElement('p');
                             }
-                            memberStr += relationObj[keys[count]].child0[i] + ", ";
+                            memberStr += child0Arr[i] + ", ";
                         }
                         if (memberStr.length > 5) {
                             memberStr = memberStr.slice(0, -2);
                         }
                         memberStr += " ]";
-                        pGroupMemberLine.innerHTML = memberStr;
-                        divNodeGroupUnit.appendChild(pGroupMemberLine);
-
+                        pLoopMemberLine.innerHTML = memberStr;
+                        divNodeLoopBlock.appendChild(pLoopMemberLine);
                     } else {
                         memberStr = "[ ";
-                        for (i = 0; i < relationObj[keys[count]].child0.length; i++) {
-                            memberStr += relationObj[keys[count]].child0[i] + ", ";
+                        for (i = 0; i < child0Arr.length; i++) {
+                            memberStr += child0Arr[i] + ", ";
                         }
 
                         if (memberStr.length > 5) {
                             memberStr = memberStr.slice(0, -2);
                         }
                         memberStr += " ]";
-                        pGroupMemberLine.innerHTML = memberStr;
-                        divNodeGroupUnit.appendChild(pGroupMemberLine);
+                        pLoopMemberLine.innerHTML = memberStr;
+                        divNodeLoopBlock.appendChild(pLoopMemberLine);
                     }
 
                     //child1
-                    pGroupMemberLine = document.createElement('p');
-                    if (relationObj[keys[count]].child1.length > lineLimit) {
+                    let child1Arr = relationManager[keys[count]].getChildNode1();
+                    pLoopMemberLine = document.createElement('p');
+                    if (child1Arr.length > lineLimit) {
                         memberStr = "[ ";
                         for (i = 0; i < lineLimit; i++) {
-                            memberStr += relationObj[keys[count]].child1[i] + ", ";
+                            memberStr += child1Arr[i] + ", ";
                         }
 
-                        for (; i < relationObj[keys[count]].child1.length; i++) {
-                            if (i % lineLimit == 0 && i < relationObj[keys[count]].child1.length) {
-                                pGroupMemberLine.innerHTML = memberStr;
-                                divNodeGroupUnit.appendChild(pGroupMemberLine);
+                        for (; i < child1Arr.length; i++) {
+                            if (i % lineLimit == 0 && i < child1Arr.length) {
+                                pLoopMemberLine.innerHTML = memberStr;
+                                divNodeLoopBlock.appendChild(pLoopMemberLine);
                                 memberStr = "&nbsp;&nbsp;";
-                                pGroupMemberLine = document.createElement('p');
+                                pLoopMemberLine = document.createElement('p');
                             }
-                            memberStr += relationObj[keys[count]].child1[i] + ", ";
+                            memberStr += child1Arr[i] + ", ";
                         }
                         if (memberStr.length > 5) {
                             memberStr = memberStr.slice(0, -2);
                         }
                         memberStr += " ]";
-                        pGroupMemberLine.innerHTML = memberStr;
-                        divNodeGroupUnit.appendChild(pGroupMemberLine);
-
+                        pLoopMemberLine.innerHTML = memberStr;
+                        divNodeLoopBlock.appendChild(pLoopMemberLine);
                     } else {
                         memberStr = "[ ";
-                        for (i = 0; i < relationObj[keys[count]].child1.length; i++) {
-                            memberStr += relationObj[keys[count]].child1[i] + ", ";
+                        for (i = 0; i < child1Arr.length; i++) {
+                            memberStr += child1Arr[i] + ", ";
                         }
                         if (memberStr.length > 5) {
                             memberStr = memberStr.slice(0, -2);
                         }
                         memberStr += " ]";
-                        pGroupMemberLine.innerHTML = memberStr;
-                        divNodeGroupUnit.appendChild(pGroupMemberLine);
-                    }
-
-                    divLayoutRow.appendChild(divNodeGroupUnit);
+                        pLoopMemberLine.innerHTML = memberStr;
+                        divNodeLoopBlock.appendChild(pLoopMemberLine);
+                    }                    
+                    divLayoutRow.appendChild(divNodeLoopBlock);
                 }
                 divRelationField.appendChild(divLayoutRow);
             }
 
-        /*************************************************DEPENDENCY********************************************************/
-            function refreshDependencyObject() {
-                if (jsonSchema != null) {
+            function handleSrcLoopSelect() {
+                var srcLoopOptionsSelect = document.getElementById('showSourceLoopOptions');
+                var srcChildOptionsSelect = document.getElementById('showSourceChildOptions');
+                var showNodeOptionsSelect = document.getElementById('showNodeOptions');
+                var selectedLoop = srcLoopOptionsSelect.options[srcLoopOptionsSelect.selectedIndex].text;
+                var selectedGroup = srcChildOptionsSelect.options[srcChildOptionsSelect.selectedIndex].text;
 
+                var nodeArray = relationManager[selectedLoop].getChildNode(selectedGroup);
+                showNodeOptionsSelect.innerHTML = "";
+                for (let count = 0; count < nodeArray.length; count++) {
+                    var optionNode = document.createElement('option');
+                    optionNode.value = count;
+                    optionNode.innerHTML = nodeArray[count];
+                    showNodeOptionsSelect.append(optionNode);
                 }
             }
+
+            function loadLoopUnitOptions() {
+                loadLoopUnitOptionsInRelation();
+                loadLoopUnitOptionsInDependency();
+            }
+
+            function loadLoopUnitOptionsInRelation() {
+                var loopOptionsSelect = document.getElementById('showLoopOptions');
+                var srcLoopOptionsSelect = document.getElementById('showSourceLoopOptions');
+                var destLoopOptionsSelect = document.getElementById('showDestLoopOptions');
+                var parentLoopOptionsSelect = document.getElementById('showParentLoopOptions');
+                var keyArray = Object.keys(relationManager);
+
+                loopOptionsSelect.innerHTML = "";
+                srcLoopOptionsSelect.innerHTML = "";
+                destLoopOptionsSelect.innerHTML = "";
+                parentLoopOptionsSelect.innerHTML = "";
+                if (keyArray.length > 0) {
+                    for (let i = 0; i < keyArray.length; i++) {
+                        var optionLoopUnit = document.createElement('option');
+                        var optionSrcLoopUnit = document.createElement('option');
+                        var optionDestLoopUnit = document.createElement('option');
+                        var optionParentLoopUnit = document.createElement('option');
+
+                        optionLoopUnit.value = i;
+                        optionLoopUnit.innerHTML = keyArray[i];
+                        optionSrcLoopUnit.value = i;
+                        optionSrcLoopUnit.innerHTML = keyArray[i];
+                        optionDestLoopUnit.value = i;
+                        optionDestLoopUnit.innerHTML = keyArray[i];
+                        optionParentLoopUnit.value = i;
+                        optionParentLoopUnit.innerHTML = keyArray[i];
+
+                        loopOptionsSelect.appendChild(optionLoopUnit);
+                        srcLoopOptionsSelect.appendChild(optionSrcLoopUnit);
+                        destLoopOptionsSelect.appendChild(optionDestLoopUnit);
+                        parentLoopOptionsSelect.appendChild(optionParentLoopUnit);
+                    }
+                }
+
+                srcLoopOptionsSelect.addEventListener("change", handleSrcLoopSelect);
+                document.getElementById('showSourceChildOptions').addEventListener("change", handleSrcLoopSelect);
+
+                srcLoopOptionsSelect.options[0].selected = true;
+                document.getElementById('showSourceChildOptions').options[0].selected = true;
+                handleSrcLoopSelect();
+            }
+
+            function addLoopUnit() {
+                var addTab = document.getElementById("v-pills-add");
+                var newLoopUnit = addTab.querySelectorAll(".form-control");
+                var name = newLoopUnit[0].value;
+                var param1 = newLoopUnit[1].value;
+                var param2 = newLoopUnit[2].value;
+                var selectedParent = document.getElementById("showParentLoopOptions");
+                var parent = selectedParent.options[selectedParent.selectedIndex].text;
+
+                if(name in relationManager) {
+                    alert("Loop exists!");
+                    return;
+                }
+
+                if (name.length > 0) {
+                    var newLoop = new LoopUnit(name);
+                    newLoop.setParentLoop(parent);
+                    relationManager[newLoop.getLoopName()] = newLoop;
+                    relationManager[parent].appendLoop(newLoop.getLoopName());
+                } else {
+                    alert("Please provide a valid name!");
+                }
+
+                prepareRelationContentField();
+                loadLoopUnitOptions();
+
+                newLoopUnit[0].value = "";
+                newLoopUnit[1].value = "";
+                newLoopUnit[2].value = "";
+            }
+
+            function deleteLoopUnit() {
+                var selectDelete = document.getElementById("showLoopOptions");
+                if (selectDelete.value == 0) {
+                    return;
+                } else {
+                    var targetLoop = relationManager[selectDelete.options[selectDelete.selectedIndex].text];
+                    var parent = targetLoop.getParentLoop()[0];
+                    var childLoop = targetLoop.getChildLoop();
+                    var childNode = targetLoop.getChildNode0();
+                    childNode.push(targetLoop.getChildNode1());
+
+                    for (let count = 0; count < childLoop.length; count++) {
+                        var loopUnit = relationManager[childLoop[count]];
+                        loopUnit.setParentLoop("ROOT");
+                        relationManager["ROOT"].appendLoop(loopUnit.getLoopName());
+                    }
+
+                    for (let count = 0; count < childNode.length; count++) {
+                        var nodeUnit = nodeMap[childNode[count]];
+                        nodeUnit.setParent("ROOT");
+                        nodeUnit.setChildGroup(0);
+                        nodeMap[nodeUnit.getName()] = nodeUnit;
+                        relationManager["ROOT"].appendNode(nodeUnit.getName(), "childNode0");
+                    }
+                    
+                    relationManager[parent].deleteNode(targetLoop.getLoopName(), "childLoop");
+                    delete relationManager[targetLoop.getLoopName()];
+                }
+                prepareRelationContentField();
+                loadLoopUnitOptions();
+            }
+
+            function allocateNode() {
+                var srcLoopOptionsSelect = document.getElementById('showSourceLoopOptions');
+                var srcChildOptionsSelect = document.getElementById('showSourceChildOptions');
+                var nodeOptionsSelect = document.getElementById('showNodeOptions');
+                var destLoopOptionsSelect = document.getElementById('showDestLoopOptions');
+                var destChildOptionsSelect = document.getElementById('showDestChildOptions');
+
+                var srcLoop = srcLoopOptionsSelect.options[srcLoopOptionsSelect.selectedIndex].text;
+                var srcChild = srcChildOptionsSelect.options[srcChildOptionsSelect.selectedIndex].text;
+                var nodeName = nodeOptionsSelect.options[nodeOptionsSelect.selectedIndex].text;
+                var destLoop = destLoopOptionsSelect.options[destLoopOptionsSelect.selectedIndex].text;
+                var destChild = destChildOptionsSelect.options[destChildOptionsSelect.selectedIndex].text;
+
+                console.log("Move " + nodeName +  " from " + srcLoop + "." + srcChild + " to "  + destLoop + "." + destChild);
+                if(nodeName in relationManager) {
+                  if(nodeName == srcLoop || nodeName == destLoop){
+                    alert("Invalid allocation!");
+                    return;
+                  }
+                  if(destChild == 1){
+                    alert("Loop can only be placed in child 0!");
+                    return;
+                  }
+                  if(srcLoop == destLoop && srcChild == destChild){
+                    return;
+                  }
+
+                  var loopUnit = relationManager[nodeName];
+                  loopUnit.deleteNode(srcLoop, "parentLoop");
+                  loopUnit.setParentLoop(destLoop);
+
+                  relationManager[destLoop].appendLoop(loopUnit.getLoopName());
+                  relationManager[srcLoop].deleteNode(loopUnit.getLoopName(), "childLoop");
+                }else {
+                  if(srcLoop == destLoop && srcChild == destChild){
+                    return;
+                  }
+                  var nodeUnit = nodeMap[nodeName];
+
+                  nodeUnit.setParent(destLoop);
+                  nodeUnit.setChildGroup(Number(destChild));
+                  nodeMap[nodeName] = nodeUnit;
+                  relationManager[destLoop].appendNode(nodeName, "childNode" + destChild);
+                  relationManager[srcLoop].deleteNode(nodeName, "childNode" + srcChild);
+                }
+
+                prepareRelationContentField();
+                loadLoopUnitOptions();
+            }
+
+            function appendNodeFromNewLine(nodeArray) {
+                for (let count = 0; count < nodeArray.length; count++) {
+                    nodeMap[nodeArray[count]] = new NodeUnit(nodeArray[count], "ROOT", 0);
+                    relationManager["ROOT"].appendNode(nodeArray[count], "childNode0");
+                }
+                prepareRelationContentField();
+                loadLoopUnitOptions();
+            }
+
+            function deleteNodeAlongWithProgramLine(nodeArray) {
+                for (let i = 0; i < nodeArray.length; i++) {
+                    var nodeUnit = nodeMap[nodeArray[i]];
+                    var parent = nodeUnit.getParent();
+                    var childGroup = nodeUnit.getChildGroup();
+                    relationManager[parent].deleteNode(nodeArray[i], childGroup);
+                    delete nodeMap[nodeArray[i]];
+                }
+                prepareRelationContentField();
+                loadLoopUnitOptions();
+            }
+
+        /*************************************************DEPENDENCY********************************************************/
+            var dependencyManager = {};
+
+            class ConstraintUnit {
+                constructor(startArg, endArg, val_0, val_1) {
+                    this.startpoint = startArg;
+                    this.endpoint = endArg;
+                    this.tag = this.startpoint + " -> " + this.endpoint;
+                    this.value_0 = val_0;
+                    this.value_1 = val_1;
+                }
+
+                getConstraintStr() {
+                    return '"' + this.startpoint + '"' + ' -> ' + '"' + this.endpoint + '"' + ' ' + this.value_0 + ' ' + this.value_1;
+                }
+
+                getConstraintTag() {
+                    return this.tag;
+                }
+
+                getStartPoint() {
+                    return this.startpoint;
+                }
+
+                getEndPoint() {
+                    return this.endpoint;
+                }
+
+                getValue0() {
+                    return this.value_0;
+                }
+                
+                getValue1() {
+                    return this.value_1;
+                }
+            }
+
+            function prepareDependencyContentField() {
+                /*
+                <div class="container">
+                  <div class="row">
+                    <ul class="list-group" id="constraintList">
+                      <li class="list-group-item borderless"></li>
+                      ...
+                    </ul>
+                  </div>
+                </div>
+                */
+                var divDependencyField = document.getElementById("dependencyArrayContainer");
+                divDependencyField.innerHTML = "";
+
+                var divLayoutRow = document.createElement("div");
+                divLayoutRow.className = "row";
+
+                var ulListGroup = document.createElement("ul");
+                ulListGroup.className = "list-group";
+
+                var keyArray = Object.keys(dependencyManager);
+                for (let count = 0; count < keyArray.length; count++) {
+                    var constraint = dependencyManager[keyArray[count]];
+                    var liListGroupItem = document.createElement("li");
+                    liListGroupItem.className = "list-group-item borderless";
+                    liListGroupItem.innerHTML = constraint.getConstraintStr();
+                    ulListGroup.appendChild(liListGroupItem);
+                }
+                divLayoutRow.appendChild(ulListGroup);
+                divDependencyField.appendChild(divLayoutRow);
+            }
+
+
+            function handleStartLoopSelect() {
+                var startLoopOptionsSelect = document.getElementById('showStartLoopOptions');
+                var startChildOptionsSelect = document.getElementById('showStartChildOptions');
+                var startNodeOptionsSelect = document.getElementById('showStartNodeOptions');
+
+                var selectedLoop = startLoopOptionsSelect.options[startLoopOptionsSelect.selectedIndex].text;
+                var selectedGroup = startChildOptionsSelect.options[startChildOptionsSelect.selectedIndex].text;
+
+                var nodeArray = relationManager[selectedLoop].getChildNode(selectedGroup);
+                startNodeOptionsSelect.innerHTML = "";
+                for (let count = 0; count < nodeArray.length; count++) {
+                    var optionNode = document.createElement('option');
+                    optionNode.value = count;
+                    optionNode.innerHTML = nodeArray[count];
+                    startNodeOptionsSelect.append(optionNode);
+                }
+            }
+
+            function handleEndLoopSelect() {
+                var endLoopOptionsSelect = document.getElementById('showEndLoopOptions');
+                var endChildOptionsSelect = document.getElementById('showEndChildOptions');
+                var showEndNodeOptionsSelect = document.getElementById('showEndNodeOptions');
+
+                var selectedLoop = endLoopOptionsSelect.options[endLoopOptionsSelect.selectedIndex].text;
+                var selectedGroup = endChildOptionsSelect.options[endChildOptionsSelect.selectedIndex].text;
+
+                var nodeArray = relationManager[selectedLoop].getChildNode(selectedGroup);
+                showEndNodeOptionsSelect.innerHTML = "";
+                for (let count = 0; count < nodeArray.length; count++) {
+                    var optionNode = document.createElement('option');
+                    optionNode.value = count;
+                    optionNode.innerHTML = nodeArray[count];
+                    showEndNodeOptionsSelect.append(optionNode);
+                }
+            }
+
+            function loadLoopUnitOptionsInDependency() {
+                var startLoopOptionsSelect = document.getElementById('showStartLoopOptions');
+                var endLoopOptionsSelect = document.getElementById('showEndLoopOptions');
+                var keyArray = Object.keys(relationManager);
+
+                startLoopOptionsSelect.innerHTML = "";
+                endLoopOptionsSelect.innerHTML = "";
+
+                if (keyArray.length > 0) {
+                    for (let i = 0; i < keyArray.length; i++) {
+                        var optionStartLoopUnit = document.createElement('option');
+                        var optionEndLoopUnit = document.createElement('option');
+
+                        optionStartLoopUnit.value = i;
+                        optionStartLoopUnit.innerHTML = keyArray[i];
+                        optionEndLoopUnit.value = i;
+                        optionEndLoopUnit.innerHTML = keyArray[i];
+
+                        startLoopOptionsSelect.appendChild(optionStartLoopUnit);
+                        endLoopOptionsSelect.appendChild(optionEndLoopUnit);
+                    }
+                }
+
+                startLoopOptionsSelect.addEventListener("change", handleStartLoopSelect);
+                document.getElementById('showStartChildOptions').addEventListener("change", handleStartLoopSelect);
+                endLoopOptionsSelect.addEventListener("change", handleEndLoopSelect);
+                document.getElementById('showEndChildOptions').addEventListener("change", handleEndLoopSelect);
+
+                startLoopOptionsSelect.options[0].selected = true;
+                document.getElementById('showStartChildOptions').options[0].selected = true;
+                endLoopOptionsSelect.options[0].selected = true;
+                document.getElementById('showEndChildOptions').options[0].selected = true;
+                handleStartLoopSelect();
+                handleEndLoopSelect();
+            }
+
+            function loadConstraintUnit() {
+                var constraintOptionsSelect = document.getElementById('showConstraintOptions');
+                var keyArray = Object.keys(dependencyManager);
+                constraintOptionsSelect.innerHTML = "";
+                if (keyArray.length > 0) {
+                    for (let i = 0; i < keyArray.length; i++) {
+                        var optionConstraintUnit = document.createElement('option');
+                        optionConstraintUnit.value = i;
+                        optionConstraintUnit.innerHTML = keyArray[i];
+                        constraintOptionsSelect.appendChild(optionConstraintUnit);
+                    }
+                }
+            }
+
+            function addConstraintUnit() {
+                var startNodeOptionsSelect = document.getElementById('showStartNodeOptions');
+                var endNodeOptionsSelect = document.getElementById('showEndNodeOptions');
+                var constraintType0Radio = document.getElementsByName('flexRadioConstraint0');
+                var constraintType1Radio = document.getElementsByName('flexRadioConstraint1');
+
+                var startNode = startNodeOptionsSelect.options[startNodeOptionsSelect.selectedIndex].text;
+                var endNode = endNodeOptionsSelect.options[endNodeOptionsSelect.selectedIndex].text;
+                var constraintInput0 = document.getElementById('ConstraintInput0').value;
+                var constraintInput1 = document.getElementById('ConstraintInput1').value;
+
+                var constraintType0 = "";
+                var constraintType1 = "";
+
+                if(startNode == endNode){
+                    alert("Invalid dependecy");//Is this allowed?
+                    return;
+                }
+
+                for (let i = 0; i < constraintType0Radio.length; i++) {
+                    if (constraintType0Radio[i].checked) {
+                        constraintType0 = constraintType0Radio[i].getAttribute("value");
+                    }
+                }
+
+                for (let i = 0; i < constraintType1Radio.length; i++) {
+                    if (constraintType1Radio[i].checked) {
+                        constraintType1 = constraintType1Radio[i].getAttribute("value");
+                    }
+                }
+
+                if (constraintType0 != "Number") {
+                    constraintInput0 = constraintType0;
+                }
+
+                if (constraintType1 != "Number") {
+                    constraintInput1 = constraintType1;
+                }
+
+                var newConstraint = new ConstraintUnit(startNode, endNode, constraintInput0, constraintInput1);
+                dependencyManager[newConstraint.getConstraintTag()] = newConstraint;
+
+                prepareDependencyContentField();
+                loadConstraintUnit();
+            }
+
+            function deleteConstraintAlongWithProgramLine(nodeArray) {
+                var keyArray = Object.keys(dependencyManager);
+
+                for (let i = 0; i < keyArray.length; i++) {
+                    for (let j = 0; j < nodeArray.length; j++) {
+                        if (keyArray[i].indexOf(nodeArray[j]) > 0) {
+                            delete dependencyManager[keyArray[i]];
+                        }
+                    }
+                }
+                prepareDependencyContentField();
+                loadConstraintUnit();
+            }
+
+            function deleteConstraintUnit() {
+                var targetConstraintOptionsSelect = document.getElementById('showConstraintOptions');
+                var targetConstraint = targetConstraintOptionsSelect.options[targetConstraintOptionsSelect.selectedIndex].text;
+
+                delete dependencyManager[targetConstraint];
+                prepareDependencyContentField();
+                loadConstraintUnit();
+            }
+
+            $(document).ready(function () {
+                $('input[type="radio"]').click(function () {
+                    var inputID = $(this).attr("id");
+                    var index = inputID.charAt(inputID.length - 1);
+                    var type = inputID.substring(0, inputID.length - 1);
+                    if (type == "flexRadioNumber") {
+                        $("#ConstraintInput" + index).show();
+                    } else {
+                        $("#ConstraintInput" + index).hide();
+                    }
+                });
+            });
         /***************************************************Canvas**********************************************************/
         /* Description of mermaid API usage and binding events
         Click button DRAW, the render function in drawDiagram() will be called and graph1 will be generated.
         After generation the render function calls the provided callback function - insertSvg()
-        The callback function is called with two parameters, the svg code of the generated graph and a function. 
+        The callback function is called with two parameters, the svg code of the generated graph and a function.
         This function binds events to the svg after it is inserted into the DOM. In this case an click event.
         If the click event is triggered, the graph2 will be generated in the same way for presentation.
         */
             function handleReproduceClick() {
                 var element = document.getElementById("diagram");
-                
+
                 var insertSvg = function (svgCode, bindFunctions) {
                     element.innerHTML += svgCode;
                     //console.log(svgCode);
@@ -1059,8 +1500,10 @@ Thus, we don't need to calculate position for each line in textarea.
                     updateSpanWl(textareaWl);
                     programManager = {}
                     initCell();
-                    initObjects();
                     prepareCodeContentField();
+                    initRelation();
+                    prepareRelationContentField();
+                    loadLoopUnitOptions();
                     document.getElementById("userInput").value = null;
                     document.getElementById("editableFields").innerHTML = "";
                 }

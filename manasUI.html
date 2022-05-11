@@ -71,15 +71,15 @@
                         <div class="collapse border-secondary" id="relationContentField">
                             <nav>
                                 <div class="nav nav-tabs nav-sm" id="nav-tab" role="tablist">
-                                    <a class="nav-item nav-link active" id="nav-nodeGroups-tab" data-toggle="tab" href="#nav-nodeGroups" role="tab" aria-controls="nav-nodeGroups" aria-selected="true">Groups</a>
+                                    <a class="nav-item nav-link active" id="nav-nodeLoops-tab" data-toggle="tab" href="#nav-nodeLoops" role="tab" aria-controls="nav-nodeLoops" aria-selected="true">Hierarchy</a>
                                     <a class="nav-item nav-link" id="nav-edit-tab" data-toggle="tab" href="#nav-edit" role="tab" aria-controls="nav-edit" aria-selected="false">Edit</a>
                                 </div>
                             </nav>
                             <div class="tab-content" id="nav-tabContent">
-                                <div class="tab-pane fade show active" id="nav-nodeGroups" role="tabpanel" aria-labelledby="nav-nodeGroups-tab">
-                                    <div class="d-flex flex-row-reverse">
+                                <div class="tab-pane fade show active" id="nav-nodeLoops" role="tabpanel" aria-labelledby="nav-nodeLoops-tab">
+                                    <!--<div class="d-flex flex-row-reverse">
                                         <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonRefreshRelationContent" onClick="refreshRelationObject()">Refresh</button>
-                                    </div>
+                                    </div>-->
                                     <div class="container" id="relationArrayContainer">
 
                                     </div>
@@ -87,24 +87,24 @@
                                 <div class="tab-pane fade" id="nav-edit" role="tabpanel" aria-labelledby="nav-edit-tab">
                                     <div class="d-flex align-items-start">
                                         <div class="nav flex-column nav-pills me-3 bg-light" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-                                            <a class="nav-link active" id="v-pills-add-tab" data-toggle="pill" href="#v-pills-add" role="tab" aria-controls="v-pills-add" aria-selected="true">Add node group</a>
-                                            <a class="nav-link" id="v-pills-delete-tab" data-toggle="pill" href="#v-pills-delete" role="tab" aria-controls="v-pills-delete" aria-selected="false">Delete node group</a>
-                                            <a class="nav-link" id="v-pills-allocate-tab" data-toggle="pill" href="#v-pills-allocate" role="tab" aria-controls="v-pills-allocate" aria-selected="false">Change node</a>
+                                            <a class="nav-link active" id="v-pills-add-tab" data-toggle="pill" href="#v-pills-add" role="tab" aria-controls="v-pills-add" aria-selected="true">Add Hierarchy</a>
+                                            <a class="nav-link" id="v-pills-delete-tab" data-toggle="pill" href="#v-pills-delete" role="tab" aria-controls="v-pills-delete" aria-selected="false">Delete Hierarchy</a>
+                                            <a class="nav-link" id="v-pills-allocate-tab" data-toggle="pill" href="#v-pills-allocate" role="tab" aria-controls="v-pills-allocate" aria-selected="false">Allocate Node</a>
                                         </div>
                                         <div class="tab-content" id="v-pills-tabContent">
                                             <div class="tab-pane fade show active" id="v-pills-add" role="tabpanel" aria-labelledby="v-pills-add-tab">
                                                 <div class="form-row">
                                                     <div class="input-group my-2 input-group-sm">
                                                         <div class="input-group-prepend">
-                                                            <span class="input-group-text">Parent</span>
+                                                            <label class="input-group-text">Parent</label>
                                                         </div>
-                                                        <select id="showParentGroupOptions" class="form-select form-select-sm" aria-label=".form-select-sm example"></select>
+                                                        <select id="showParentLoopOptions" class="custom-select"></select>
                                                     </div>
                                                 </div>
                                                 <div class="form-row">
                                                     <div class="input-group my-2 input-group-sm">
                                                         <div class="input-group-prepend">
-                                                            <span class="input-group-text">Name</span>
+                                                            <label class="input-group-text">Name</label>
                                                         </div>
                                                         <input type="text" class="form-control">
                                                     </div>
@@ -115,7 +115,7 @@
                                                 <div class="form-row">
                                                     <div class="input-group my-2 input-group-sm">
                                                         <div class="input-group-prepend">
-                                                            <span class="input-group-text">value1</span>
+                                                            <label class="input-group-text">Param1</label>
                                                         </div>
                                                         <input type="text" class="form-control">
                                                     </div>
@@ -126,7 +126,7 @@
                                                 <div class="form-row">
                                                     <div class="input-group my-2 input-group-sm">
                                                         <div class="input-group-prepend">
-                                                            <span class="input-group-text">value2</span>
+                                                            <label class="input-group-text">Param2</label>
                                                         </div>
                                                         <input type="text" class="form-control">
                                                     </div>
@@ -135,39 +135,55 @@
                                                     </div>
                                                 </div>
                                                 <div class="form-row d-flex flex-row-reverse">
-                                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="addNewGroupButton" onClick="addGroupUnit()">Add</button>
+                                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="addNewLoopButton" onClick="addLoopUnit()">Add</button>
                                                 </div>
                                             </div>
                                             <div class="tab-pane fade" id="v-pills-delete" role="tabpanel" aria-labelledby="v-pills-delete-tab">
                                                 <div class="form-row">
                                                     <div class="input-group my-2 input-group-sm">
                                                         <div class="input-group-prepend">
-                                                            <span class="input-group-text">Target group</span>
+                                                            <label class="input-group-text">Target Hierarchy</label>
                                                         </div>
-                                                        <select id="showGroupOptions" class="form-select form-select-sm" aria-label=".form-select-sm example"></select>
-                                                        <button class="btn btn-outline-secondary btn-sm" type="button" id="deleteSelectedGroup" onClick="deleteGroupUnit()">Delete</button>
+                                                        <select id="showLoopOptions" class="custom-select"></select>
                                                     </div>
+                                                </div>
+                                                <div class="form-row d-flex flex-row-reverse">
+                                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="deleteSelectedLoop" onClick="deleteLoopUnit()">Delete</button>
                                                 </div>
                                             </div>
                                             <div class="tab-pane fade" id="v-pills-allocate" role="tabpanel" aria-labelledby="v-pills-allocate-tab">
                                                 <div class="form-row">
                                                     <div class="input-group my-2 input-group-sm">
                                                         <div class="input-group-prepend">
-                                                            <span class="input-group-text">Source group</span>
+                                                            <label class="input-group-text">Source Hierarchy</label>
                                                         </div>
-                                                        <select id="showSourceGroupOptions" class="form-select form-select-sm" aria-label=".form-select-sm example"></select>
+                                                        <select id="showSourceLoopOptions" class="custom-select"></select>
                                                         <div class="input-group-prepend">
-                                                            <span class="input-group-text">Node name</span>
+                                                            <label class="input-group-text">Source group</label>
                                                         </div>
-                                                        <select id="showNodeOptions" class="form-select form-select-sm" aria-label=".form-select-sm example"></select>
+                                                        <select id="showSourceChildOptions" class="custom-select">
+                                                            <option value="0">0</option>
+                                                            <option value="1">1</option>
+                                                        </select>
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Node name</label>
+                                                        </div>
+                                                        <select id="showNodeOptions" class="custom-select"></select>
                                                     </div>
                                                 </div>
                                                 <div class="form-row">
                                                     <div class="input-group my-2 input-group-sm">
                                                         <div class="input-group-prepend">
-                                                            <span class="input-group-text">Dest. group</span>
+                                                            <label class="input-group-text">Dest. Hierarchy</label>
                                                         </div>
-                                                        <select id="showDestGroupOptions" class="form-select form-select-sm" aria-label=".form-select-sm example"></select>
+                                                        <select id="showDestLoopOptions" class="custom-select"></select>
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Dest. group</label>
+                                                        </div>
+                                                        <select id="showDestChildOptions" class="custom-select">
+                                                            <option value="0">0</option>
+                                                            <option value="1">1</option>
+                                                        </select>
                                                     </div>
                                                 </div>
                                                 <div class="form-row d-flex flex-row-reverse">
@@ -186,11 +202,142 @@
                             .DEPENDENCY
                         </button>
                         <div class="collapse border-secondary" id="dependencyContentField">
-                            <div class="d-flex flex-row-reverse">
-                                <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonRefreshDependencyContent" onClick="refreshDependencyObject()">Refresh</button>
-                            </div>
-                            <div class="container" id="dependencyArrayContainer">
+                            <nav>
+                                <div class="nav nav-tabs nav-sm" id="nav-tab-dependency" role="tablist">
+                                    <a class="nav-item nav-link active" id="nav-constraints-tab" data-toggle="tab" href="#nav-constraints" role="tab" aria-controls="nav-constraints" aria-selected="true">Constraints</a>
+                                    <a class="nav-item nav-link" id="nav-edit-constraints-tab" data-toggle="tab" href="#nav-edit-constraints" role="tab" aria-controls="nav-edit-constraints" aria-selected="false">Edit</a>
+                                </div>
+                            </nav>
+                            <div class="tab-content" id="nav-tabContent-dependency">
+                                <div class="tab-pane fade show active" id="nav-constraints" role="tabpanel" aria-labelledby="nav-constraints-tab">
+                                    <div class="container" id="dependencyArrayContainer">
 
+                                    </div>
+                                </div>
+                                <div class="tab-pane fade" id="nav-edit-constraints" role="tabpanel" aria-labelledby="nav-edit-constraints-tab">
+                                    <div class="d-flex align-items-start">
+                                        <div class="nav flex-column nav-pills me-3 bg-light" id="v-pills-tab-constraints" role="tablist" aria-orientation="vertical">
+                                            <a class="nav-link active" id="v-pills-add-constraints-tab" data-toggle="pill" href="#v-pills-add-constraints" role="tab" aria-controls="v-pills-add-constraints" aria-selected="true">Add Constraint</a>
+                                            <a class="nav-link" id="v-pills-delete-constraints-tab" data-toggle="pill" href="#v-pills-delete-constraints" role="tab" aria-controls="v-pills-delete-constraints" aria-selected="false">Delete Constraint</a>
+                                        </div>
+                                        <div class="tab-content" id="v-pills-tabContent-constraints">
+                                            <div class="tab-pane fade show active" id="v-pills-add-constraints" role="tabpanel" aria-labelledby="v-pills-add-constraints-tab">
+                                                <div class="form-row">
+                                                    <div class="input-group my-2 input-group-sm">
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Start point</label>
+                                                        </div>
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Hierarchy</label>
+                                                        </div>
+                                                        <select id="showStartLoopOptions" class="custom-select"></select>
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Group</label>
+                                                        </div>
+                                                        <select id="showStartChildOptions" class="custom-select">
+                                                            <option value="0">0</option>
+                                                            <option value="1">1</option>
+                                                        </select>
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Node name</label>
+                                                        </div>
+                                                        <select id="showStartNodeOptions" class="custom-select"></select>
+                                                    </div>
+                                                </div>
+                                                <div class="form-row">
+                                                    <div class="input-group my-2 input-group-sm">
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">End point</label>
+                                                        </div>
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Hierarchy</label>
+                                                        </div>
+                                                        <select id="showEndLoopOptions" class="custom-select"></select>
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Group</label>
+                                                        </div>
+                                                        <select id="showEndChildOptions" class="custom-select">
+                                                            <option value="0">0</option>
+                                                            <option value="1">1</option>
+                                                        </select>
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Node name</label>
+                                                        </div>
+                                                        <select id="showEndNodeOptions" class="custom-select"></select>
+                                                    </div>
+                                                </div>
+                                                <div class="form-row">
+                                                    <div class="input-group my-2 input-group-sm">
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Constraint 0</label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="radio" name="flexRadioConstraint0" id="flexRadioPosINF0" value="+INF">
+                                                            <label class="form-check-label" for="flexRadioPosINF0">
+                                                                +INF
+                                                            </label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="radio" name="flexRadioConstraint0" id="flexRadioNegINF0" value="-INF">
+                                                            <label class="form-check-label" for="flexRadioNegINF0">
+                                                                -INF
+                                                            </label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="radio" name="flexRadioConstraint0" id="flexRadioNumber0" value="Number" checked>
+                                                            <label class="form-check-label" for="flexRadioNumber0">
+                                                                Number&nbsp;&nbsp;
+                                                            </label>
+                                                        </div>
+                                                        <input id="ConstraintInput0" type="text" class="form-control">
+                                                    </div>
+                                                </div>
+                                                <div class="form-row">
+                                                    <div class="input-group my-2 input-group-sm">
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Constraint 1</label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="radio" name="flexRadioConstraint1" id="flexRadioPosINF1" value="+INF">
+                                                            <label class="form-check-label" for="flexRadioPosINF1">
+                                                                +INF
+                                                            </label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="radio" name="flexRadioConstraint1" id="flexRadioNegINF1" value="-INF">
+                                                            <label class="form-check-label" for="flexRadioNegINF1">
+                                                                -INF
+                                                            </label>
+                                                        </div>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="radio" name="flexRadioConstraint1" id="flexRadioNumber1" value="Number" checked>
+                                                            <label class="form-check-label" for="flexRadioNumber1">
+                                                                Number&nbsp;&nbsp;
+                                                            </label>
+                                                        </div>
+                                                        <input id="ConstraintInput1" type="text" class="form-control">
+                                                    </div>
+                                                </div>
+                                                <div class="form-row d-flex flex-row-reverse">
+                                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="addNewConstraintButton" onClick="addConstraintUnit()">Add</button>
+                                                </div>
+                                            </div>
+                                            <div class="tab-pane fade" id="v-pills-delete-constraints" role="tabpanel" aria-labelledby="v-pills-delete-constraints-tab">
+                                                <div class="form-row">
+                                                    <div class="input-group my-2 input-group-sm">
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Target Constraint</label>
+                                                        </div>
+                                                        <select id="showConstraintOptions" class="custom-select"></select>
+                                                    </div>
+                                                </div>
+                                                <div class="form-row d-flex flex-row-reverse">
+                                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="deleteSelectedConstraint" onClick="deleteConstraintUnit()">Delete</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -203,7 +350,7 @@
                         </div>
                     </div>
 
-                    <select id="showInstrOptions" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                    <select id="showInstrOptions" class="custom-select">
                         <option value="0">Instruction Set</option>
                     </select>
 

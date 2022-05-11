@@ -99,7 +99,7 @@ ul.list-group_disable {
     height: 300px !important;
 }
 
-#nodeGroupUnit {
+#nodeLoopBlock {
     width: 100%;
     display: block;
 }
@@ -110,23 +110,39 @@ ul.list-group_disable {
 
 #v-pills-tabContent {
     margin: 5px 0px 2px 17px;
+    width: 75%;
 }
 
-#deleteGroupElements {
-    margin: 7px 0px 0px 0px;
-}
-
-#showGroupOptions {
+#relation-division .custom-select {
     margin: 0px 5px 0px 0px;
 }
 
-#showSourceGroupOptions {
-    margin: 0px 5px 0px 0px;
-}
 /*------------dependency division--------------*/
 #dependency-division {
     margin-top: 5px;
     margin-bottom: 5px;
+}
+
+#nav-tabContent-dependency {
+    overflow-y: scroll !important;
+    height: 300px !important;
+}
+
+#v-pills-tab-constraints {
+    height: 300px;
+}
+
+#v-pills-tabContent-constraints {
+    margin: 5px 0px 2px 17px;
+    width: 75%;
+}
+
+#dependency-division .custom-select {
+    margin: 0px 5px 0px 0px;
+}
+
+#dependency-division .form-check {
+    margin: 4px 0px 0px 5px;
 }
 
 /*----------------test plot--------------------*/
