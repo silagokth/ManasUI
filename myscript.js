@@ -133,8 +133,8 @@ This is version 0.0.2
 
             function initRelation() {
                 relationManager = {};
-                rootLoop = new LoopUnit("ROOT");
-                relationManager[rootLoop.getLoopName()] = rootLoop;
+                rootGroup = new GroupUnit("ROOT");
+                relationManager[rootGroup.getGroupName()] = rootGroup;
             }
 
             /* Load the selected file -> expected "isa.json" */
@@ -751,21 +751,21 @@ This is version 0.0.2
             var nodeMap = {};
 
             class NodeUnit {
-                constructor(nameArg, parentArg, childGroupArg) {
+                constructor(nameArg, parentArg, subgroupArg) {
                     this.name = nameArg;
                     this.parent = parentArg;
-                    this.childGroup = childGroupArg;
+                    this.subgroup = subgroupArg;
                 }
 
                 setParent(parentArg) {
                     this.parent = parentArg;
                 }
 
-                setChildGroup(num) {
+                setSubgroup(num) {
                     if (num == 1)
-                        this.childGroup = 1;
+                        this.subgroup = 1;
                     else
-                        this.childGroup = 0;
+                        this.subgroup = 0;
                 }
 
                 getName(){
@@ -776,101 +776,101 @@ This is version 0.0.2
                     return this.parent;
                 }
 
-                getChildGroup() {
-                    if (this.childGroup == 0)
-                        return "childNode0";
+                getSubgroup() {
+                    if (this.subgroup == 0)
+                        return "subgroup0";
                     else
-                        return "childNode1";
+                        return "subgroup1";
                 }
             }
 
-            class LoopUnit {
+            class GroupUnit {
                 constructor(nameArg) {
                     this.name = nameArg;
-                    this.childLoop = [];
-                    this.parentLoop = [];
-                    this.childNode0 = [];
-                    this.childNode1 = [];
+                    this.childGroup = [];
+                    this.parentGroup = [];
+                    this.subgroup0 = [];
+                    this.subgroup1 = [];
                 }
 
-                getLoopName() {
+                getGroupName() {
                     return this.name;
                 }
 
-                setParentLoop(parent) {
-                    this.parentLoop.push(parent);
+                setParentGroup(parent) {
+                    this.parentGroup.push(parent);
                 }
 
-                getParentLoop() {
-                    return this.parentLoop;
+                getParentGroup() {
+                    return this.parentGroup;
                 }
 
-                getChildLoop() {
-                    return this.childLoop;
+                getChildGroup() {
+                    return this.childGroup;
                 }
 
-                getChildNode0() {
-                    return this.childNode0;
+                getSubgroup0() {
+                    return this.subgroup0;
                 }
 
-                getChildNode1() {
-                    return this.childNode1;
+                getSubgroup1() {
+                    return this.subgroup1;
                 }
 
-                getChildNode(whichGroup){
-                    if (whichGroup == "childNode0" || whichGroup == 0) {
-                        return this.childNode0;
-                    } else if (whichGroup == "childNode1" || whichGroup == 1) {
-                        return this.childNode1;
+                getSubgroup(whichGroup) {
+                    if (whichGroup == "subgroup0" || whichGroup == 0) {
+                        return this.subgroup0;
+                    } else if (whichGroup == "subgroup1" || whichGroup == 1) {
+                        return this.subgroup1;
                     }
                 }
 
-                appendLoop(loopName) {
-                    var index = this.childLoop.length;
-                    this.childLoop.push(loopName);
-                    this.childNode0.splice(index, 0, loopName);
+                appendGroup(groupName) {
+                    var index = this.childGroup.length;
+                    this.childGroup.push(groupName);
+                    this.subgroup0.splice(index, 0, groupName);
                 }
 
                 appendNode(nodeName, whereToAdd) {
-                    if (whereToAdd == "childNode0") {
-                        this.childNode0.push(nodeName);
-                    } else if (whereToAdd == "childNode1") {
-                        this.childNode1.push(nodeName);
+                    if (whereToAdd == "subgroup0") {
+                        this.subgroup0.push(nodeName);
+                    } else if (whereToAdd == "subgroup1") {
+                        this.subgroup1.push(nodeName);
                     }
                 }
 
                 deleteNode(nodeName, whereToDelete) {
-                    if (whereToDelete == "childLoop") {
-                        for (let count = 0; count < this.childLoop.length; count++) {
-                            if (nodeName == this.childLoop[count]) {
-                                this.childLoop.splice(count, 1);
+                    if (whereToDelete == "childGroup") {
+                        for (let count = 0; count < this.childGroup.length; count++) {
+                            if (nodeName == this.childGroup[count]) {
+                                this.childGroup.splice(count, 1);
                                 break;
                             }
                         }
-                        for (count = 0; count < this.childNode0.length; count++) {
-                            if (nodeName == this.childNode0[count]) {
-                                this.childNode0.splice(count, 1);
+                        for (count = 0; count < this.subgroup0.length; count++) {
+                            if (nodeName == this.subgroup0[count]) {
+                                this.subgroup0.splice(count, 1);
                                 break;
                             }
                         }
-                    } else if (whereToDelete == "parentLoop") {
-                        for (let count = 0; count < this.parentLoop.length; count++) {
-                            if (nodeName == this.parentLoop[count]) {
-                                this.parentLoop.splice(count, 1);
+                    } else if (whereToDelete == "parentGroup") {
+                        for (let count = 0; count < this.parentGroup.length; count++) {
+                            if (nodeName == this.parentGroup[count]) {
+                                this.parentGroup.splice(count, 1);
                                 break;
                             }
                         }
-                    } else if (whereToDelete == "childNode0") {
-                        for (let count = 0; count < this.childNode0.length; count++) {
-                            if (nodeName == this.childNode0[count]) {
-                                this.childNode0.splice(count, 1);
+                    } else if (whereToDelete == "subgroup0") {
+                        for (let count = 0; count < this.subgroup0.length; count++) {
+                            if (nodeName == this.subgroup0[count]) {
+                                this.subgroup0.splice(count, 1);
                                 break;
                             }
                         }
-                    } else if (whereToDelete == "childNode1") {
-                        for (let count = 0; count < this.childNode1.length; count++) {
-                            if (nodeName == this.childNode1[count]) {
-                                this.childNode1.splice(count, 1);
+                    } else if (whereToDelete == "subgroup1") {
+                        for (let count = 0; count < this.subgroup1.length; count++) {
+                            if (nodeName == this.subgroup1[count]) {
+                                this.subgroup1.splice(count, 1);
                                 break;
                             }
                         }
@@ -882,7 +882,7 @@ This is version 0.0.2
                 /*
                 <div class="container">
                   <div class="row">
-                    <div id="nodeLoopBlock">
+                    <div id="nodeGroupBlock">
                       <p id="unitName"></p>
                       <p id="unitLine"></p>
                       ...
@@ -901,103 +901,103 @@ This is version 0.0.2
                     let i = 0;
                     let memberStr = "";
                     let lineLimit = 8;
-                    var divNodeLoopBlock = document.createElement('div');
-                    divNodeLoopBlock.id = "nodeLoopBlock";
+                    var divNodeGroupBlock = document.createElement('div');
+                    divNodeGroupBlock.id = "nodeGroupBlock";
 
-                    var pLoopName = document.createElement('p');
-                    pLoopName.className = "font-weight-bold";
-                    pLoopName.innerHTML = keys[count] + "\n";
+                    var pGroupName = document.createElement('p');
+                    pGroupName.className = "font-weight-bold";
+                    pGroupName.innerHTML = keys[count] + "\n";
 
-                    divNodeLoopBlock.appendChild(pLoopName);
+                    divNodeGroupBlock.appendChild(pGroupName);
 
-                    var pLoopMemberLine = document.createElement('p');
+                    var pGroupMemberLine = document.createElement('p');
 
-                    //child0
-                    let child0Arr = relationManager[keys[count]].getChildNode0();
-                    if (child0Arr.length > lineLimit) {
+                    //subgroup0
+                    let subgroup0Arr = relationManager[keys[count]].getSubgroup0();
+                    if (subgroup0Arr.length > lineLimit) {
                         memberStr = "[ ";
                         for (i = 0; i < lineLimit; i++) {
-                            memberStr += child0Arr[i] + ", ";
+                            memberStr += subgroup0Arr[i] + ", ";
                         }
 
-                        for (; i < child0Arr.length; i++) {
-                            if (i % lineLimit == 0 && i < child0Arr.length) {
-                                pLoopMemberLine.innerHTML = memberStr;
-                                divNodeLoopBlock.appendChild(pLoopMemberLine);
+                        for (; i < subgroup0Arr.length; i++) {
+                            if (i % lineLimit == 0 && i < subgroup0Arr.length) {
+                                pGroupMemberLine.innerHTML = memberStr;
+                                divNodeGroupBlock.appendChild(pGroupMemberLine);
                                 memberStr = "&nbsp;&nbsp;";
-                                pLoopMemberLine = document.createElement('p');
+                                pGroupMemberLine = document.createElement('p');
                             }
-                            memberStr += child0Arr[i] + ", ";
+                            memberStr += subgroup0Arr[i] + ", ";
                         }
                         if (memberStr.length > 5) {
                             memberStr = memberStr.slice(0, -2);
                         }
                         memberStr += " ]";
-                        pLoopMemberLine.innerHTML = memberStr;
-                        divNodeLoopBlock.appendChild(pLoopMemberLine);
+                        pGroupMemberLine.innerHTML = memberStr;
+                        divNodeGroupBlock.appendChild(pGroupMemberLine);
                     } else {
                         memberStr = "[ ";
-                        for (i = 0; i < child0Arr.length; i++) {
-                            memberStr += child0Arr[i] + ", ";
+                        for (i = 0; i < subgroup0Arr.length; i++) {
+                            memberStr += subgroup0Arr[i] + ", ";
                         }
 
                         if (memberStr.length > 5) {
                             memberStr = memberStr.slice(0, -2);
                         }
                         memberStr += " ]";
-                        pLoopMemberLine.innerHTML = memberStr;
-                        divNodeLoopBlock.appendChild(pLoopMemberLine);
+                        pGroupMemberLine.innerHTML = memberStr;
+                        divNodeGroupBlock.appendChild(pGroupMemberLine);
                     }
 
-                    //child1
-                    let child1Arr = relationManager[keys[count]].getChildNode1();
-                    pLoopMemberLine = document.createElement('p');
-                    if (child1Arr.length > lineLimit) {
+                    //subgroup1
+                    let subgroup1Arr = relationManager[keys[count]].getSubgroup1();
+                    pGroupMemberLine = document.createElement('p');
+                    if (subgroup1Arr.length > lineLimit) {
                         memberStr = "[ ";
                         for (i = 0; i < lineLimit; i++) {
-                            memberStr += child1Arr[i] + ", ";
+                            memberStr += subgroup1Arr[i] + ", ";
                         }
 
-                        for (; i < child1Arr.length; i++) {
-                            if (i % lineLimit == 0 && i < child1Arr.length) {
-                                pLoopMemberLine.innerHTML = memberStr;
-                                divNodeLoopBlock.appendChild(pLoopMemberLine);
+                        for (; i < subgroup1Arr.length; i++) {
+                            if (i % lineLimit == 0 && i < subgroup1Arr.length) {
+                                pGroupMemberLine.innerHTML = memberStr;
+                                divNodeGroupBlock.appendChild(pGroupMemberLine);
                                 memberStr = "&nbsp;&nbsp;";
-                                pLoopMemberLine = document.createElement('p');
+                                pGroupMemberLine = document.createElement('p');
                             }
-                            memberStr += child1Arr[i] + ", ";
+                            memberStr += subgroup1Arr[i] + ", ";
                         }
                         if (memberStr.length > 5) {
                             memberStr = memberStr.slice(0, -2);
                         }
                         memberStr += " ]";
-                        pLoopMemberLine.innerHTML = memberStr;
-                        divNodeLoopBlock.appendChild(pLoopMemberLine);
+                        pGroupMemberLine.innerHTML = memberStr;
+                        divNodeGroupBlock.appendChild(pGroupMemberLine);
                     } else {
                         memberStr = "[ ";
-                        for (i = 0; i < child1Arr.length; i++) {
-                            memberStr += child1Arr[i] + ", ";
+                        for (i = 0; i < subgroup1Arr.length; i++) {
+                            memberStr += subgroup1Arr[i] + ", ";
                         }
                         if (memberStr.length > 5) {
                             memberStr = memberStr.slice(0, -2);
                         }
                         memberStr += " ]";
-                        pLoopMemberLine.innerHTML = memberStr;
-                        divNodeLoopBlock.appendChild(pLoopMemberLine);
+                        pGroupMemberLine.innerHTML = memberStr;
+                        divNodeGroupBlock.appendChild(pGroupMemberLine);
                     }                    
-                    divLayoutRow.appendChild(divNodeLoopBlock);
+                    divLayoutRow.appendChild(divNodeGroupBlock);
                 }
                 divRelationField.appendChild(divLayoutRow);
             }
 
-            function handleSrcLoopSelect() {
-                var srcLoopOptionsSelect = document.getElementById('showSourceLoopOptions');
-                var srcChildOptionsSelect = document.getElementById('showSourceChildOptions');
+            function handleSrcGroupSelect() {
+                var srcGroupOptionsSelect = document.getElementById('showSourceGroupOptions');
+                var srcSubgroupOptionsSelect = document.getElementById('showSourceSubgroupOptions');
                 var showNodeOptionsSelect = document.getElementById('showNodeOptions');
-                var selectedLoop = srcLoopOptionsSelect.options[srcLoopOptionsSelect.selectedIndex].text;
-                var selectedGroup = srcChildOptionsSelect.options[srcChildOptionsSelect.selectedIndex].text;
+                var selectedGroup = srcGroupOptionsSelect.options[srcGroupOptionsSelect.selectedIndex].text;
+                var selectedSubgroup = srcSubgroupOptionsSelect.options[srcSubgroupOptionsSelect.selectedIndex].text;
 
-                var nodeArray = relationManager[selectedLoop].getChildNode(selectedGroup);
+                var nodeArray = relationManager[selectedGroup].getSubgroup(selectedSubgroup);
                 showNodeOptionsSelect.innerHTML = "";
                 for (let count = 0; count < nodeArray.length; count++) {
                     var optionNode = document.createElement('option');
@@ -1007,185 +1007,185 @@ This is version 0.0.2
                 }
             }
 
-            function loadLoopUnitOptions() {
-                loadLoopUnitOptionsInRelation();
-                loadLoopUnitOptionsInDependency();
+            function loadGroupUnitOptions() {
+                loadGroupUnitOptionsInRelation();
+                loadGroupUnitOptionsInDependency();
             }
 
-            function loadLoopUnitOptionsInRelation() {
-                var loopOptionsSelect = document.getElementById('showLoopOptions');
-                var srcLoopOptionsSelect = document.getElementById('showSourceLoopOptions');
-                var destLoopOptionsSelect = document.getElementById('showDestLoopOptions');
-                var parentLoopOptionsSelect = document.getElementById('showParentLoopOptions');
+            function loadGroupUnitOptionsInRelation() {
+                var groupOptionsSelect = document.getElementById('showGroupOptions');
+                var srcGroupOptionsSelect = document.getElementById('showSourceGroupOptions');
+                var destGroupOptionsSelect = document.getElementById('showDestGroupOptions');
+                var parentGroupOptionsSelect = document.getElementById('showParentGroupOptions');
                 var keyArray = Object.keys(relationManager);
 
-                loopOptionsSelect.innerHTML = "";
-                srcLoopOptionsSelect.innerHTML = "";
-                destLoopOptionsSelect.innerHTML = "";
-                parentLoopOptionsSelect.innerHTML = "";
+                groupOptionsSelect.innerHTML = "";
+                srcGroupOptionsSelect.innerHTML = "";
+                destGroupOptionsSelect.innerHTML = "";
+                parentGroupOptionsSelect.innerHTML = "";
                 if (keyArray.length > 0) {
                     for (let i = 0; i < keyArray.length; i++) {
-                        var optionLoopUnit = document.createElement('option');
-                        var optionSrcLoopUnit = document.createElement('option');
-                        var optionDestLoopUnit = document.createElement('option');
-                        var optionParentLoopUnit = document.createElement('option');
+                        var optionGroupUnit = document.createElement('option');
+                        var optionSrcGroupUnit = document.createElement('option');
+                        var optionDestGroupUnit = document.createElement('option');
+                        var optionParentGroupUnit = document.createElement('option');
 
-                        optionLoopUnit.value = i;
-                        optionLoopUnit.innerHTML = keyArray[i];
-                        optionSrcLoopUnit.value = i;
-                        optionSrcLoopUnit.innerHTML = keyArray[i];
-                        optionDestLoopUnit.value = i;
-                        optionDestLoopUnit.innerHTML = keyArray[i];
-                        optionParentLoopUnit.value = i;
-                        optionParentLoopUnit.innerHTML = keyArray[i];
+                        optionGroupUnit.value = i;
+                        optionGroupUnit.innerHTML = keyArray[i];
+                        optionSrcGroupUnit.value = i;
+                        optionSrcGroupUnit.innerHTML = keyArray[i];
+                        optionDestGroupUnit.value = i;
+                        optionDestGroupUnit.innerHTML = keyArray[i];
+                        optionParentGroupUnit.value = i;
+                        optionParentGroupUnit.innerHTML = keyArray[i];
 
-                        loopOptionsSelect.appendChild(optionLoopUnit);
-                        srcLoopOptionsSelect.appendChild(optionSrcLoopUnit);
-                        destLoopOptionsSelect.appendChild(optionDestLoopUnit);
-                        parentLoopOptionsSelect.appendChild(optionParentLoopUnit);
+                        groupOptionsSelect.appendChild(optionGroupUnit);
+                        srcGroupOptionsSelect.appendChild(optionSrcGroupUnit);
+                        destGroupOptionsSelect.appendChild(optionDestGroupUnit);
+                        parentGroupOptionsSelect.appendChild(optionParentGroupUnit);
                     }
                 }
 
-                srcLoopOptionsSelect.addEventListener("change", handleSrcLoopSelect);
-                document.getElementById('showSourceChildOptions').addEventListener("change", handleSrcLoopSelect);
+                srcGroupOptionsSelect.addEventListener("change", handleSrcGroupSelect);
+                document.getElementById('showSourceSubgroupOptions').addEventListener("change", handleSrcGroupSelect);
 
-                srcLoopOptionsSelect.options[0].selected = true;
-                document.getElementById('showSourceChildOptions').options[0].selected = true;
-                handleSrcLoopSelect();
+                srcGroupOptionsSelect.options[0].selected = true;
+                document.getElementById('showSourceSubgroupOptions').options[0].selected = true;
+                handleSrcGroupSelect();
             }
 
-            function addLoopUnit() {
+            function addGroupUnit() {
                 var addTab = document.getElementById("v-pills-add");
-                var newLoopUnit = addTab.querySelectorAll(".form-control");
-                var name = newLoopUnit[0].value;
-                var param1 = newLoopUnit[1].value;
-                var param2 = newLoopUnit[2].value;
-                var selectedParent = document.getElementById("showParentLoopOptions");
+                var newGroupUnit = addTab.querySelectorAll(".form-control");
+                var name = newGroupUnit[0].value;
+                var param1 = newGroupUnit[1].value;
+                var param2 = newGroupUnit[2].value;
+                var selectedParent = document.getElementById("showParentGroupOptions");
                 var parent = selectedParent.options[selectedParent.selectedIndex].text;
 
                 if(name in relationManager) {
-                    alert("Loop exists!");
+                    alert("Group exists!");
                     return;
                 }
 
                 if (name.length > 0) {
-                    var newLoop = new LoopUnit(name);
-                    newLoop.setParentLoop(parent);
-                    relationManager[newLoop.getLoopName()] = newLoop;
-                    relationManager[parent].appendLoop(newLoop.getLoopName());
+                    var newGroup = new GroupUnit(name);
+                    newGroup.setParentGroup(parent);
+                    relationManager[newGroup.getGroupName()] = newGroup;
+                    relationManager[parent].appendGroup(newGroup.getGroupName());
                 } else {
                     alert("Please provide a valid name!");
                 }
 
                 prepareRelationContentField();
-                loadLoopUnitOptions();
+                loadGroupUnitOptions();
 
-                newLoopUnit[0].value = "";
-                newLoopUnit[1].value = "";
-                newLoopUnit[2].value = "";
+                newGroupUnit[0].value = "";
+                newGroupUnit[1].value = "";
+                newGroupUnit[2].value = "";
             }
 
-            function deleteLoopUnit() {
-                var selectDelete = document.getElementById("showLoopOptions");
+            function deleteGroupUnit() {
+                var selectDelete = document.getElementById("showGroupOptions");
                 if (selectDelete.value == 0) {
                     return;
                 } else {
-                    var targetLoop = relationManager[selectDelete.options[selectDelete.selectedIndex].text];
-                    var parent = targetLoop.getParentLoop()[0];
-                    var childLoop = targetLoop.getChildLoop();
-                    var childNode = targetLoop.getChildNode0();
-                    childNode.push(targetLoop.getChildNode1());
+                    var targetGroup = relationManager[selectDelete.options[selectDelete.selectedIndex].text];
+                    var parent = targetGroup.getParentGroup()[0];
+                    var childGroup = targetGroup.getChildGroup();
+                    var subgroup = targetGroup.getSubgroup0();
+                    subgroup.push.apply(subgroup, targetGroup.getSubgroup1());
 
-                    for (let count = 0; count < childLoop.length; count++) {
-                        var loopUnit = relationManager[childLoop[count]];
-                        loopUnit.setParentLoop("ROOT");
-                        relationManager["ROOT"].appendLoop(loopUnit.getLoopName());
+                    for (let count = 0; count < childGroup.length; count++) {
+                        var groupUnit = relationManager[childGroup[count]];
+                        groupUnit.setParentGroup("ROOT");
+                        relationManager["ROOT"].appendGroup(groupUnit.getGroupName());
                     }
-
-                    for (let count = 0; count < childNode.length; count++) {
-                        var nodeUnit = nodeMap[childNode[count]];
+                    console.log(subgroup);
+                    for (let count = 0; count < subgroup.length; count++) {
+                        var nodeUnit = nodeMap[subgroup[count]];
                         nodeUnit.setParent("ROOT");
-                        nodeUnit.setChildGroup(0);
+                        nodeUnit.setSubgroup(0);
                         nodeMap[nodeUnit.getName()] = nodeUnit;
-                        relationManager["ROOT"].appendNode(nodeUnit.getName(), "childNode0");
+                        relationManager["ROOT"].appendNode(nodeUnit.getName(), "subgroup0");
                     }
                     
-                    relationManager[parent].deleteNode(targetLoop.getLoopName(), "childLoop");
-                    delete relationManager[targetLoop.getLoopName()];
+                    relationManager[parent].deleteNode(targetGroup.getGroupName(), "childGroup");
+                    delete relationManager[targetGroup.getGroupName()];
                 }
                 prepareRelationContentField();
-                loadLoopUnitOptions();
+                loadGroupUnitOptions();
             }
 
             function allocateNode() {
-                var srcLoopOptionsSelect = document.getElementById('showSourceLoopOptions');
-                var srcChildOptionsSelect = document.getElementById('showSourceChildOptions');
+                var srcGroupOptionsSelect = document.getElementById('showSourceGroupOptions');
+                var srcSubgroupOptionsSelect = document.getElementById('showSourceSubgroupOptions');
                 var nodeOptionsSelect = document.getElementById('showNodeOptions');
-                var destLoopOptionsSelect = document.getElementById('showDestLoopOptions');
-                var destChildOptionsSelect = document.getElementById('showDestChildOptions');
+                var destGroupOptionsSelect = document.getElementById('showDestGroupOptions');
+                var destSubgroupOptionsSelect = document.getElementById('showDestSubgroupOptions');
 
-                var srcLoop = srcLoopOptionsSelect.options[srcLoopOptionsSelect.selectedIndex].text;
-                var srcChild = srcChildOptionsSelect.options[srcChildOptionsSelect.selectedIndex].text;
+                var srcGroup = srcGroupOptionsSelect.options[srcGroupOptionsSelect.selectedIndex].text;
+                var srcSubgroup = srcSubgroupOptionsSelect.options[srcSubgroupOptionsSelect.selectedIndex].text;
                 var nodeName = nodeOptionsSelect.options[nodeOptionsSelect.selectedIndex].text;
-                var destLoop = destLoopOptionsSelect.options[destLoopOptionsSelect.selectedIndex].text;
-                var destChild = destChildOptionsSelect.options[destChildOptionsSelect.selectedIndex].text;
+                var destGroup = destGroupOptionsSelect.options[destGroupOptionsSelect.selectedIndex].text;
+                var destSubgroup = destSubgroupOptionsSelect.options[destSubgroupOptionsSelect.selectedIndex].text;
 
-                console.log("Move " + nodeName +  " from " + srcLoop + "." + srcChild + " to "  + destLoop + "." + destChild);
+                console.log("Move " + nodeName +  " from " + srcGroup + "." + srcSubgroup + " to "  + destGroup + "." + destSubgroup);
                 if(nodeName in relationManager) {
-                  if(nodeName == srcLoop || nodeName == destLoop){
+                  if(nodeName == srcGroup || nodeName == destGroup){
                     alert("Invalid allocation!");
                     return;
                   }
-                  if(destChild == 1){
-                    alert("Loop can only be placed in child 0!");
+                  if(destSubgroup == 1){
+                    alert("Group can only be placed in Subgroup 0!");
                     return;
                   }
-                  if(srcLoop == destLoop && srcChild == destChild){
+                  if(srcGroup == destGroup && srcSubgroup == destSubgroup){
                     return;
                   }
 
-                  var loopUnit = relationManager[nodeName];
-                  loopUnit.deleteNode(srcLoop, "parentLoop");
-                  loopUnit.setParentLoop(destLoop);
+                  var groupUnit = relationManager[nodeName];
+                  groupUnit.deleteNode(srcGroup, "parentGroup");
+                  groupUnit.setParentGroup(destGroup);
 
-                  relationManager[destLoop].appendLoop(loopUnit.getLoopName());
-                  relationManager[srcLoop].deleteNode(loopUnit.getLoopName(), "childLoop");
+                  relationManager[destGroup].appendGroup(groupUnit.getGroupName());
+                  relationManager[srcGroup].deleteNode(groupUnit.getGroupName(), "childGroup");
                 }else {
-                  if(srcLoop == destLoop && srcChild == destChild){
+                  if(srcGroup == destGroup && srcSubgroup == destSubgroup){
                     return;
                   }
                   var nodeUnit = nodeMap[nodeName];
 
-                  nodeUnit.setParent(destLoop);
-                  nodeUnit.setChildGroup(Number(destChild));
+                  nodeUnit.setParent(destGroup);
+                  nodeUnit.setSubgroup(Number(destSubgroup));
                   nodeMap[nodeName] = nodeUnit;
-                  relationManager[destLoop].appendNode(nodeName, "childNode" + destChild);
-                  relationManager[srcLoop].deleteNode(nodeName, "childNode" + srcChild);
+                  relationManager[destGroup].appendNode(nodeName, "subgroup" + destSubgroup);
+                  relationManager[srcGroup].deleteNode(nodeName, "subgroup" + srcSubgroup);
                 }
 
                 prepareRelationContentField();
-                loadLoopUnitOptions();
+                loadGroupUnitOptions();
             }
 
             function appendNodeFromNewLine(nodeArray) {
                 for (let count = 0; count < nodeArray.length; count++) {
                     nodeMap[nodeArray[count]] = new NodeUnit(nodeArray[count], "ROOT", 0);
-                    relationManager["ROOT"].appendNode(nodeArray[count], "childNode0");
+                    relationManager["ROOT"].appendNode(nodeArray[count], "subgroup0");
                 }
                 prepareRelationContentField();
-                loadLoopUnitOptions();
+                loadGroupUnitOptions();
             }
 
             function deleteNodeAlongWithProgramLine(nodeArray) {
                 for (let i = 0; i < nodeArray.length; i++) {
                     var nodeUnit = nodeMap[nodeArray[i]];
                     var parent = nodeUnit.getParent();
-                    var childGroup = nodeUnit.getChildGroup();
-                    relationManager[parent].deleteNode(nodeArray[i], childGroup);
+                    var subgroup = nodeUnit.getSubgroup();
+                    relationManager[parent].deleteNode(nodeArray[i], subgroup);
                     delete nodeMap[nodeArray[i]];
                 }
                 prepareRelationContentField();
-                loadLoopUnitOptions();
+                loadGroupUnitOptions();
             }
 
         /*************************************************DEPENDENCY********************************************************/
@@ -1258,15 +1258,15 @@ This is version 0.0.2
             }
 
 
-            function handleStartLoopSelect() {
-                var startLoopOptionsSelect = document.getElementById('showStartLoopOptions');
-                var startChildOptionsSelect = document.getElementById('showStartChildOptions');
+            function handleStartGroupSelect() {
+                var startGroupOptionsSelect = document.getElementById('showStartGroupOptions');
+                var startSubgroupOptionsSelect = document.getElementById('showStartSubgroupOptions');
                 var startNodeOptionsSelect = document.getElementById('showStartNodeOptions');
 
-                var selectedLoop = startLoopOptionsSelect.options[startLoopOptionsSelect.selectedIndex].text;
-                var selectedGroup = startChildOptionsSelect.options[startChildOptionsSelect.selectedIndex].text;
+                var selectedGroup = startGroupOptionsSelect.options[startGroupOptionsSelect.selectedIndex].text;
+                var selectedSubgroup = startSubgroupOptionsSelect.options[startSubgroupOptionsSelect.selectedIndex].text;
 
-                var nodeArray = relationManager[selectedLoop].getChildNode(selectedGroup);
+                var nodeArray = relationManager[selectedGroup].getSubgroup(selectedSubgroup);
                 startNodeOptionsSelect.innerHTML = "";
                 for (let count = 0; count < nodeArray.length; count++) {
                     var optionNode = document.createElement('option');
@@ -1276,15 +1276,15 @@ This is version 0.0.2
                 }
             }
 
-            function handleEndLoopSelect() {
-                var endLoopOptionsSelect = document.getElementById('showEndLoopOptions');
-                var endChildOptionsSelect = document.getElementById('showEndChildOptions');
+            function handleEndGroupSelect() {
+                var endGroupOptionsSelect = document.getElementById('showEndGroupOptions');
+                var endSubgroupOptionsSelect = document.getElementById('showEndSubgroupOptions');
                 var showEndNodeOptionsSelect = document.getElementById('showEndNodeOptions');
 
-                var selectedLoop = endLoopOptionsSelect.options[endLoopOptionsSelect.selectedIndex].text;
-                var selectedGroup = endChildOptionsSelect.options[endChildOptionsSelect.selectedIndex].text;
+                var selectedGroup = endGroupOptionsSelect.options[endGroupOptionsSelect.selectedIndex].text;
+                var selectedSubgroup = endSubgroupOptionsSelect.options[endSubgroupOptionsSelect.selectedIndex].text;
 
-                var nodeArray = relationManager[selectedLoop].getChildNode(selectedGroup);
+                var nodeArray = relationManager[selectedGroup].getSubgroup(selectedSubgroup);
                 showEndNodeOptionsSelect.innerHTML = "";
                 for (let count = 0; count < nodeArray.length; count++) {
                     var optionNode = document.createElement('option');
@@ -1294,40 +1294,40 @@ This is version 0.0.2
                 }
             }
 
-            function loadLoopUnitOptionsInDependency() {
-                var startLoopOptionsSelect = document.getElementById('showStartLoopOptions');
-                var endLoopOptionsSelect = document.getElementById('showEndLoopOptions');
+            function loadGroupUnitOptionsInDependency() {
+                var startGroupOptionsSelect = document.getElementById('showStartGroupOptions');
+                var endGroupOptionsSelect = document.getElementById('showEndGroupOptions');
                 var keyArray = Object.keys(relationManager);
 
-                startLoopOptionsSelect.innerHTML = "";
-                endLoopOptionsSelect.innerHTML = "";
+                startGroupOptionsSelect.innerHTML = "";
+                endGroupOptionsSelect.innerHTML = "";
 
                 if (keyArray.length > 0) {
                     for (let i = 0; i < keyArray.length; i++) {
-                        var optionStartLoopUnit = document.createElement('option');
-                        var optionEndLoopUnit = document.createElement('option');
+                        var optionStartGroupUnit = document.createElement('option');
+                        var optionEndGroupUnit = document.createElement('option');
 
-                        optionStartLoopUnit.value = i;
-                        optionStartLoopUnit.innerHTML = keyArray[i];
-                        optionEndLoopUnit.value = i;
-                        optionEndLoopUnit.innerHTML = keyArray[i];
+                        optionStartGroupUnit.value = i;
+                        optionStartGroupUnit.innerHTML = keyArray[i];
+                        optionEndGroupUnit.value = i;
+                        optionEndGroupUnit.innerHTML = keyArray[i];
 
-                        startLoopOptionsSelect.appendChild(optionStartLoopUnit);
-                        endLoopOptionsSelect.appendChild(optionEndLoopUnit);
+                        startGroupOptionsSelect.appendChild(optionStartGroupUnit);
+                        endGroupOptionsSelect.appendChild(optionEndGroupUnit);
                     }
                 }
 
-                startLoopOptionsSelect.addEventListener("change", handleStartLoopSelect);
-                document.getElementById('showStartChildOptions').addEventListener("change", handleStartLoopSelect);
-                endLoopOptionsSelect.addEventListener("change", handleEndLoopSelect);
-                document.getElementById('showEndChildOptions').addEventListener("change", handleEndLoopSelect);
+                startGroupOptionsSelect.addEventListener("change", handleStartGroupSelect);
+                document.getElementById('showStartSubgroupOptions').addEventListener("change", handleStartGroupSelect);
+                endGroupOptionsSelect.addEventListener("change", handleEndGroupSelect);
+                document.getElementById('showEndSubgroupOptions').addEventListener("change", handleEndGroupSelect);
 
-                startLoopOptionsSelect.options[0].selected = true;
-                document.getElementById('showStartChildOptions').options[0].selected = true;
-                endLoopOptionsSelect.options[0].selected = true;
-                document.getElementById('showEndChildOptions').options[0].selected = true;
-                handleStartLoopSelect();
-                handleEndLoopSelect();
+                startGroupOptionsSelect.options[0].selected = true;
+                document.getElementById('showStartSubgroupOptions').options[0].selected = true;
+                endGroupOptionsSelect.options[0].selected = true;
+                document.getElementById('showEndSubgroupOptions').options[0].selected = true;
+                handleStartGroupSelect();
+                handleEndGroupSelect();
             }
 
             function loadConstraintUnit() {
@@ -1503,7 +1503,7 @@ This is version 0.0.2
                     prepareCodeContentField();
                     initRelation();
                     prepareRelationContentField();
-                    loadLoopUnitOptions();
+                    loadGroupUnitOptions();
                     document.getElementById("userInput").value = null;
                     document.getElementById("editableFields").innerHTML = "";
                 }

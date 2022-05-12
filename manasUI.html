@@ -71,12 +71,12 @@
                         <div class="collapse border-secondary" id="relationContentField">
                             <nav>
                                 <div class="nav nav-tabs nav-sm" id="nav-tab" role="tablist">
-                                    <a class="nav-item nav-link active" id="nav-nodeLoops-tab" data-toggle="tab" href="#nav-nodeLoops" role="tab" aria-controls="nav-nodeLoops" aria-selected="true">Hierarchy</a>
+                                    <a class="nav-item nav-link active" id="nav-hierarchy-tab" data-toggle="tab" href="#nav-hierarchy" role="tab" aria-controls="nav-hierarchy" aria-selected="true">Hierarchy</a>
                                     <a class="nav-item nav-link" id="nav-edit-tab" data-toggle="tab" href="#nav-edit" role="tab" aria-controls="nav-edit" aria-selected="false">Edit</a>
                                 </div>
                             </nav>
                             <div class="tab-content" id="nav-tabContent">
-                                <div class="tab-pane fade show active" id="nav-nodeLoops" role="tabpanel" aria-labelledby="nav-nodeLoops-tab">
+                                <div class="tab-pane fade show active" id="nav-hierarchy" role="tabpanel" aria-labelledby="nav-hierarchy-tab">
                                     <!--<div class="d-flex flex-row-reverse">
                                         <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonRefreshRelationContent" onClick="refreshRelationObject()">Refresh</button>
                                     </div>-->
@@ -87,8 +87,8 @@
                                 <div class="tab-pane fade" id="nav-edit" role="tabpanel" aria-labelledby="nav-edit-tab">
                                     <div class="d-flex align-items-start">
                                         <div class="nav flex-column nav-pills me-3 bg-light" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-                                            <a class="nav-link active" id="v-pills-add-tab" data-toggle="pill" href="#v-pills-add" role="tab" aria-controls="v-pills-add" aria-selected="true">Add Hierarchy</a>
-                                            <a class="nav-link" id="v-pills-delete-tab" data-toggle="pill" href="#v-pills-delete" role="tab" aria-controls="v-pills-delete" aria-selected="false">Delete Hierarchy</a>
+                                            <a class="nav-link active" id="v-pills-add-tab" data-toggle="pill" href="#v-pills-add" role="tab" aria-controls="v-pills-add" aria-selected="true">Add Group</a>
+                                            <a class="nav-link" id="v-pills-delete-tab" data-toggle="pill" href="#v-pills-delete" role="tab" aria-controls="v-pills-delete" aria-selected="false">Delete Group</a>
                                             <a class="nav-link" id="v-pills-allocate-tab" data-toggle="pill" href="#v-pills-allocate" role="tab" aria-controls="v-pills-allocate" aria-selected="false">Allocate Node</a>
                                         </div>
                                         <div class="tab-content" id="v-pills-tabContent">
@@ -98,7 +98,7 @@
                                                         <div class="input-group-prepend">
                                                             <label class="input-group-text">Parent</label>
                                                         </div>
-                                                        <select id="showParentLoopOptions" class="custom-select"></select>
+                                                        <select id="showParentGroupOptions" class="custom-select"></select>
                                                     </div>
                                                 </div>
                                                 <div class="form-row">
@@ -135,33 +135,33 @@
                                                     </div>
                                                 </div>
                                                 <div class="form-row d-flex flex-row-reverse">
-                                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="addNewLoopButton" onClick="addLoopUnit()">Add</button>
+                                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="addNewGroupButton" onClick="addGroupUnit()">Add</button>
                                                 </div>
                                             </div>
                                             <div class="tab-pane fade" id="v-pills-delete" role="tabpanel" aria-labelledby="v-pills-delete-tab">
                                                 <div class="form-row">
                                                     <div class="input-group my-2 input-group-sm">
                                                         <div class="input-group-prepend">
-                                                            <label class="input-group-text">Target Hierarchy</label>
+                                                            <label class="input-group-text">Target Group</label>
                                                         </div>
-                                                        <select id="showLoopOptions" class="custom-select"></select>
+                                                        <select id="showGroupOptions" class="custom-select"></select>
                                                     </div>
                                                 </div>
                                                 <div class="form-row d-flex flex-row-reverse">
-                                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="deleteSelectedLoop" onClick="deleteLoopUnit()">Delete</button>
+                                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="deleteSelectedGroup" onClick="deleteGroupUnit()">Delete</button>
                                                 </div>
                                             </div>
                                             <div class="tab-pane fade" id="v-pills-allocate" role="tabpanel" aria-labelledby="v-pills-allocate-tab">
                                                 <div class="form-row">
                                                     <div class="input-group my-2 input-group-sm">
                                                         <div class="input-group-prepend">
-                                                            <label class="input-group-text">Source Hierarchy</label>
+                                                            <label class="input-group-text">Source Group</label>
                                                         </div>
-                                                        <select id="showSourceLoopOptions" class="custom-select"></select>
+                                                        <select id="showSourceGroupOptions" class="custom-select"></select>
                                                         <div class="input-group-prepend">
-                                                            <label class="input-group-text">Source group</label>
+                                                            <label class="input-group-text">Subgroup</label>
                                                         </div>
-                                                        <select id="showSourceChildOptions" class="custom-select">
+                                                        <select id="showSourceSubgroupOptions" class="custom-select">
                                                             <option value="0">0</option>
                                                             <option value="1">1</option>
                                                         </select>
@@ -174,13 +174,13 @@
                                                 <div class="form-row">
                                                     <div class="input-group my-2 input-group-sm">
                                                         <div class="input-group-prepend">
-                                                            <label class="input-group-text">Dest. Hierarchy</label>
+                                                            <label class="input-group-text">Destination Group</label>
                                                         </div>
-                                                        <select id="showDestLoopOptions" class="custom-select"></select>
+                                                        <select id="showDestGroupOptions" class="custom-select"></select>
                                                         <div class="input-group-prepend">
-                                                            <label class="input-group-text">Dest. group</label>
+                                                            <label class="input-group-text">Subgroup</label>
                                                         </div>
-                                                        <select id="showDestChildOptions" class="custom-select">
+                                                        <select id="showDestSubgroupOptions" class="custom-select">
                                                             <option value="0">0</option>
                                                             <option value="1">1</option>
                                                         </select>
@@ -228,13 +228,13 @@
                                                             <label class="input-group-text">Start point</label>
                                                         </div>
                                                         <div class="input-group-prepend">
-                                                            <label class="input-group-text">Hierarchy</label>
-                                                        </div>
-                                                        <select id="showStartLoopOptions" class="custom-select"></select>
-                                                        <div class="input-group-prepend">
                                                             <label class="input-group-text">Group</label>
                                                         </div>
-                                                        <select id="showStartChildOptions" class="custom-select">
+                                                        <select id="showStartGroupOptions" class="custom-select"></select>
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Subgroup</label>
+                                                        </div>
+                                                        <select id="showStartSubgroupOptions" class="custom-select">
                                                             <option value="0">0</option>
                                                             <option value="1">1</option>
                                                         </select>
@@ -250,13 +250,13 @@
                                                             <label class="input-group-text">End point</label>
                                                         </div>
                                                         <div class="input-group-prepend">
-                                                            <label class="input-group-text">Hierarchy</label>
-                                                        </div>
-                                                        <select id="showEndLoopOptions" class="custom-select"></select>
-                                                        <div class="input-group-prepend">
                                                             <label class="input-group-text">Group</label>
                                                         </div>
-                                                        <select id="showEndChildOptions" class="custom-select">
+                                                        <select id="showEndGroupOptions" class="custom-select"></select>
+                                                        <div class="input-group-prepend">
+                                                            <label class="input-group-text">Subgroup</label>
+                                                        </div>
+                                                        <select id="showEndSubgroupOptions" class="custom-select">
                                                             <option value="0">0</option>
                                                             <option value="1">1</option>
                                                         </select>
