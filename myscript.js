@@ -1,7 +1,212 @@
 /*
-This is version 0.0.2
+This is version 0.0.3
 */
+$(document).ready(function () {
+    var $flowchart = $('#flowchartworkspace');
+    var $container = $flowchart.parent();
 
+    // Apply the plugin on a standard, empty div...
+    $flowchart.flowchart({
+        data: defaultFlowchartData,
+        defaultSelectedLinkColor: '#000055',
+        linkWidth: 3,
+        grid: 10,
+        multipleLinksOnInput: true,
+        multipleLinksOnOutput: true,
+        verticalConnection: true,
+    });
+
+    //zoom
+    
+    const elem = document.getElementById('flowchartworkspace');
+    const panzoom = Panzoom(elem, {
+        maxScale: 5,
+        overflow: scroll,
+    });
+    panzoom.pan(10, 10);
+    panzoom.zoom(1, { animate: true });
+
+    $('#zoom_in').click(function () {
+        panzoom.zoomIn();
+        $flowchart.flowchart('setPositionRatio', panzoom.getScale());
+    });
+
+    $('#zoom_out').click(function () {
+        panzoom.zoomOut();
+        $flowchart.flowchart('setPositionRatio', panzoom.getScale());
+    });
+
+    //-------------------------------------------------
+
+    function getOperatorData($element) {
+        var nbInputs = parseInt($element.data('nb-inputs'), 10);
+        var nbOutputs = parseInt($element.data('nb-outputs'), 10);
+        var data = {
+            properties: {
+                title: $element.text(),
+                inputs: {},
+                outputs: {}
+            }
+        };
+
+        var i = 0;
+        for (i = 0; i < nbInputs; i++) {
+            data.properties.inputs['input_' + i] = {
+                //label: 'Input ' + (i + 1)
+                label: ' '
+            };
+        }
+        for (i = 0; i < nbOutputs; i++) {
+            data.properties.outputs['output_' + i] = {
+                //label: 'Output ' + (i + 1)
+                label: ' '
+            };
+        }
+
+        return data;
+    }
+
+    //-----------------------------------------
+    //--- operator and link properties
+    //--- start
+    var $operatorProperties = $('#operator_properties');
+    $operatorProperties.hide();
+    var $linkProperties = $('#link_properties');
+    $linkProperties.hide();
+    var $operatorTitle = $('#operator_title');
+    var $linkColor = $('#link_color');
+
+    $flowchart.flowchart({
+        onOperatorSelect: function (operatorId) {
+            $operatorProperties.show();
+            $operatorTitle.val($flowchart.flowchart('getOperatorTitle', operatorId));
+            return true;
+        },
+        onOperatorUnselect: function () {
+            $operatorProperties.hide();
+            return true;
+        },
+        onLinkSelect: function (linkId) {
+            $linkProperties.show();
+            $linkColor.val($flowchart.flowchart('getLinkMainColor', linkId));
+            return true;
+        },
+        onLinkUnselect: function () {
+            $linkProperties.hide();
+            return true;
+        }
+    });
+
+    $operatorTitle.keyup(function () {
+        var selectedOperatorId = $flowchart.flowchart('getSelectedOperatorId');
+        if (selectedOperatorId != null) {
+            $flowchart.flowchart('setOperatorTitle', selectedOperatorId, $operatorTitle.val());
+        }
+    });
+
+    $linkColor.change(function () {
+        var selectedLinkId = $flowchart.flowchart('getSelectedLinkId');
+        if (selectedLinkId != null) {
+            $flowchart.flowchart('setLinkMainColor', selectedLinkId, $linkColor.val());
+        }
+    });
+    //--- end
+    //--- operator and link properties
+    //-----------------------------------------
+
+    //-----------------------------------------
+    //--- delete operator / link button
+    //--- start
+    $('#delete_selected').click(function () {
+        $flowchart.flowchart('deleteSelected');
+    });
+    //--- end
+    //--- delete operator / link button
+    //-----------------------------------------
+
+
+
+    //-----------------------------------------
+    //--- create operator button
+    //--- start
+    var operatorI = 0;
+    $('#create_operator').click(function () {
+        var operatorId = 'created_operator_' + operatorI;
+        var operatorData = {
+            top: ($flowchart.height() / 2) - 30,
+            left: ($flowchart.width() / 2) - 100 + (operatorI * 10),
+            properties: {
+                title: 'Operator ' + (operatorI + 3),
+                inputs: {
+                    input_1: {
+                        //label: 'Input 1',
+                        label: ' ',
+                    }
+                },
+                outputs: {
+                    output_1: {
+                        //label: 'Output 1',
+                        label: ' ',
+                    }
+                }
+            }
+        };
+
+        operatorI++;
+
+        $flowchart.flowchart('createOperator', operatorId, operatorData);
+
+    });
+    //--- end
+    //--- create operator button
+    //-----------------------------------------
+
+
+    //-----------------------------------------
+    //--- save and load
+    //--- start
+    function Flow2Text() {
+        var data = $flowchart.flowchart('getData');
+        $('#flowchart_data').val(JSON.stringify(data, null, 2));
+    }
+    $('#get_data').click(Flow2Text);
+
+    function Text2Flow() {
+        var data = JSON.parse($('#flowchart_data').val());
+        $flowchart.flowchart('setData', data);
+    }
+    $('#set_data').click(Text2Flow);
+
+    /*global localStorage*/
+    function SaveToLocalStorage() {
+        if (typeof localStorage !== 'object') {
+            alert('local storage not available');
+            return;
+        }
+        Flow2Text();
+        localStorage.setItem("stgLocalFlowChart", $('#flowchart_data').val());
+    }
+    $('#save_local').click(SaveToLocalStorage);
+
+    function LoadFromLocalStorage() {
+        if (typeof localStorage !== 'object') {
+            alert('local storage not available');
+            return;
+        }
+        var s = localStorage.getItem("stgLocalFlowChart");
+        if (s != null) {
+            $('#flowchart_data').val(s);
+            Text2Flow();
+        }
+        else {
+            alert('local storage empty');
+        }
+    }
+    $('#load_local').click(LoadFromLocalStorage);
+    //--- end
+    //--- save and load
+    //-----------------------------------------
+});
             //Store the json content as an object
             var jsonSchema = {};
             //Map the value of "select" to instruction name
@@ -90,7 +295,7 @@ This is version 0.0.2
                 getNodeArray() {
                     let nodeArr = [];
                     for (let count = 1; count < Number(this.phase) + 1; count++) {
-                        nodeArr.push("Op_" + this.getId() + "_" + count);
+                        nodeArr.push("Op_" + getLineNumberString(this.getId()) + "_" + count);
                     }
                     return nodeArr;
                 }
@@ -573,6 +778,8 @@ This is version 0.0.2
                 programManager[pLine.getId()] = pLine;
                 appendNewLineToCellArray(pLine);
                 appendNodeFromNewLine(pLine.getNodeArray());
+                addOperatorToFlowchartData(pLine.getNodeArray());
+                addConstriantForInnerNode(pLine.getNodeArray());
                 updateSpanWl(pLine.getId());
             }
 
@@ -1196,6 +1403,7 @@ This is version 0.0.2
                     this.startpoint = startArg;
                     this.endpoint = endArg;
                     this.tag = this.startpoint + " -> " + this.endpoint;
+                    this.name = this.startpoint + "_" + this.endpoint;
                     this.value_0 = val_0;
                     this.value_1 = val_1;
                 }
@@ -1206,6 +1414,10 @@ This is version 0.0.2
 
                 getConstraintTag() {
                     return this.tag;
+                }
+
+                getConstraintName() {
+                    return this.name;
                 }
 
                 getStartPoint() {
@@ -1390,6 +1602,22 @@ This is version 0.0.2
                 loadConstraintUnit();
             }
 
+            function addConstriantForInnerNode(nodeArray) {
+                if (nodeArray.length < 2) {
+                    return;
+                }
+                var newConstraintArray = [];
+
+                for (let count = 0; count < nodeArray.length - 1; count++) {
+                    var newConstraint = new ConstraintUnit(nodeArray[count], nodeArray[count + 1], "1", "1");
+                    dependencyManager[newConstraint.getConstraintTag()] = newConstraint;
+                    newConstraintArray.push(newConstraint.getConstraintTag());
+                }
+                prepareDependencyContentField();
+                loadConstraintUnit();
+                addLinkToFlowchartData(newConstraintArray);
+            }
+
             function deleteConstraintAlongWithProgramLine(nodeArray) {
                 var keyArray = Object.keys(dependencyManager);
 
@@ -1433,48 +1661,111 @@ This is version 0.0.2
         This function binds events to the svg after it is inserted into the DOM. In this case an click event.
         If the click event is triggered, the graph2 will be generated in the same way for presentation.
         */
-            function handleReproduceClick() {
-                var element = document.getElementById("diagram");
+            var operatorNum = 1; 
+            var linkNum = 1;
+            var flowchartDataFormat = {
+                operators: {
+                    operator1: {
+                        top: 20,
+                        left: 20,
+                        properties: {
+                            title: 'Operator 1',
+                            inputs: {},
+                            outputs: {
+                                output_1: {
+                                    label: ' ',
+                                }
+                            }
+                        }
+                    },
+                    operator2: {
+                        top: 80,
+                        left: 300,
+                        properties: {
+                            title: 'Operator 2',
+                            inputs: {
+                                input_1: {
+                                    label: '1',
+                                },
+                                input_2: {
+                                    label: '2',
+                                },
+                                input_3: {
+                                    label: '3',
+                                },
+                                input_4: {
+                                    label: '4',
+                                },
+                            },
+                            outputs: {}
+                        }
+                    },
+                },
+                links: {
+                    link_1: {
+                        fromOperator: 'operator1',
+                        fromConnector: 'output_1',
+                        toOperator: 'operator2',
+                        toConnector: 'input_2',
+                    },
+                }
+            };
 
-                var insertSvg = function (svgCode, bindFunctions) {
-                    element.innerHTML += svgCode;
-                    //console.log(svgCode);
-                };
+            var defaultFlowchartData = {
+                operators: {},
+                links: {}
+            };
 
-                var graphDefinitionRoot = 'graph TD\n A(ROOT) --> A1{0}\n subgraph ROOT\n A1\n B1[Op_0_1_0_1] -.->|1,+INF| B2[Op_0_1_1_1]\n \
-                                           B1[Op_0_1_0_1] -.->|1,1| B3[Op_0_1_1_2]\n end';
-
-                mermaid.mermaidAPI.render('graph2', graphDefinitionRoot, insertSvg);
-
-                console.log("draw");
-            }
-
-            function reproduceDiagram(element) {
-                element.setAttribute('onclick', 'handleReproduceClick()');
-            }
-
-            function drawDiagram() {
-                var element = document.getElementById("diagram");
-                var graphDefinitionRoot = 'graph TD\n A(ROOT) --> A1{0}\n subgraph ROOT\n A1\n B1[Op_0_1_0_1] -.->|1,+INF| B2[Op_0_1_1_1]\n \
-                                           B1[Op_0_1_0_1] -.->|1,1| B3[Op_0_1_1_2]\n end';
-
-                var insertSvg = function (svgCode, bindFunctions) {
-                    element.innerHTML = svgCode;
-                    if(typeof callback !== 'undefined'){
-                        callback(id);
+            function addLinkToFlowchartData(constraintArray) {
+                //Todo: verify if nodes exist 
+                for (let count = 0; count < constraintArray.length; count++) {
+                    var constraintUnit = dependencyManager[constraintArray[count]];
+                    var newLink = {
+                        fromOperator: constraintUnit.getStartPoint(),
+                        fromConnector: "output_1",
+                        toOperator: constraintUnit.getEndPoint(),
+                        toConnector: "input_1",
                     }
-                    bindFunctions = reproduceDiagram;
-                    bindFunctions(element);
-                    //or the above two lines can be merged to reproduceDiagram(element);
-                };
-
-                mermaid.mermaidAPI.render('graph1', graphDefinitionRoot, insertSvg, element);
+                    defaultFlowchartData.links[constraintUnit.getConstraintName()] = newLink;
+                    linkNum++;
+                }               
+                updateGraphData();
             }
 
-            function clearDiagram() {
-                document.getElementById("diagram").innerHTML = "";
+            function addOperatorToFlowchartData(nodeArray) {
+                for (let count = 0; count < nodeArray.length; count++) {
+                    var newOperator = {
+                        top: operatorNum*40,
+                        left: 50,
+                        properties: {
+                            title: nodeArray[count],
+                            uncontained: true,
+                            inputs: {
+                                input_1: {
+                                    label: ' ',
+                                },
+                            },
+                            outputs: {
+                                output_1: {
+                                    label: ' ',
+                                },
+                            }
+                        }
+                    }
+                    defaultFlowchartData.operators[nodeArray[count]] = newOperator;
+                    operatorNum++;
+                }
+                updateGraphData();
+            }
+                
+
+            function modifyOperator() {
+                //user case: new link on a node
             }
 
+            function updateGraphData() {
+                $('#flowchartworkspace').flowchart('setData', defaultFlowchartData);
+            }
         /*************************Test program. Use random number generator to select the index of instruction**************************/
             function handleRunTestProgram() {
                 var programLength = 5;
@@ -1508,7 +1799,6 @@ This is version 0.0.2
                     document.getElementById("editableFields").innerHTML = "";
                 }
             }
-
 /************************************************End**********************************************************/
 
 

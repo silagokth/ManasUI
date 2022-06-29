@@ -38,16 +38,59 @@
 
 /*******************************left console*****************************************/
 /*------------canvas--------------*/
-#instrPlotCanvas {
+#flowchartwindow {
     overflow: scroll;
-    -ms-overflow-style: none; /* IE and Edge */
     width: inherit;
-    height: 500px;
-    border: 1px solid
+    max-height: 700px;
+    border: 1px solid;
+    background: repeating-linear-gradient(45deg, rgb(238, 238, 238), rgb(238, 238, 238) 10px, rgb(229, 229, 229) 10px, rgb(229, 229, 229) 20px);
 }
 
-#instrPlotCanvas::-webkit-scrollbar {
+#flowchartworkspace {
+    width: 1500px;
+    height: 1000px;
+    background-color: white;
+    /*
+        min-height: 1000px;
+    background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjIiIGhlaWdodD0iMjIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSIyMiIgaGVpZ2h0PSIyMiIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDUuNSBMIDIyIDUuNSBNIDUuNSAwIEwgNS41IDIyIE0gMCAxMSBMIDIyIDExIE0gMTEgMCBMIDExIDIyIE0gMCAxNi41IEwgMjIgMTYuNSBNIDE2LjUgMCBMIDE2LjUgMjIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgb3BhY2l0eT0iMC4yIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNIDIyIDAgTCAwIDAgMCAyMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZDBkMGQwIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=");
+    */
+}
+
+#flowchartworkspace_ {
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+#flowchartworkspace_::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
+}
+
+.flowchart-container_disabled {
+    width: 800px;
+    height: 400px;
+    background: white;
+    border: 1px solid #BBB;
+    margin-bottom: 10px;
+}
+
+.flowchart-buttons-1 {
+    margin-top: 10px;
+}
+
+.flowchart-buttons-2 {
+    margin-top: 10px;
+}
+
+.flowchart-data-container {
+    margin-top: 10px;
+}
+
+#link_properties {
+    width: 50%;
+}
+
+#flowchart_data {
+    width: 50%;
+    min-height: 300px;
 }
 /*------------code division--------------*/
 #code-division {
@@ -145,12 +188,7 @@ ul.list-group_disable {
     margin: 4px 0px 0px 5px;
 }
 
-/*----------------test plot--------------------*/
-.mermaidSpan {
-    display: block;
-}
-
-
+/*----------------other test-------------------*/
 #schema {
     display: block;
     float: left;
