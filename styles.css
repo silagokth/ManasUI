@@ -5,8 +5,8 @@
 #inputFiles {
     margin: 5px 10px 0 0;
     width: 300px;
-    direction: rtl;
-    float: right;
+    direction: ltr;
+    float: left;
     display: block;
     border: none
 }
@@ -28,8 +28,8 @@
     overflow: scroll;
     -ms-overflow-style: none; /* IE and Edge */
     width: inherit;
-    height: 500px;
-    border: 1px solid
+    height: 700px;
+    border: 1px solid;
 }
 
 #programFields::-webkit-scrollbar {
@@ -44,6 +44,7 @@
     max-height: 700px;
     border: 1px solid;
     background: repeating-linear-gradient(45deg, rgb(238, 238, 238), rgb(238, 238, 238) 10px, rgb(229, 229, 229) 10px, rgb(229, 229, 229) 20px);
+
 }
 
 #flowchartworkspace {
@@ -53,7 +54,8 @@
     /*
         min-height: 1000px;
     background-image: url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjIiIGhlaWdodD0iMjIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSIyMiIgaGVpZ2h0PSIyMiIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDUuNSBMIDIyIDUuNSBNIDUuNSAwIEwgNS41IDIyIE0gMCAxMSBMIDIyIDExIE0gMTEgMCBMIDExIDIyIE0gMCAxNi41IEwgMjIgMTYuNSBNIDE2LjUgMCBMIDE2LjUgMjIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgb3BhY2l0eT0iMC4yIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNIDIyIDAgTCAwIDAgMCAyMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZDBkMGQwIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=");
-    */
+    background: repeating-linear-gradient(rgb(238, 238, 238), rgb(238, 238, 238) 10px, rgb(229, 229, 229) 10px, rgb(229, 229, 229) 20px);
+        */
 }
 
 #flowchartworkspace_ {
@@ -85,26 +87,24 @@
 }
 
 #operator_properties {
-    width: 50%;
+    width: 65%;
 }
 
 #link_properties {
-    width: 50%;
+    width: 65%;
+}
+
+#link_properties .form-check {
+    margin: 4px 0px 0px 5px;
 }
 
 #opGroup_properties {
-    width: 50%;
+    width: 65%;
 }
 
 #flowchart_data {
     width: 50%;
     min-height: 300px;
-}
-
-#resizable{
-    width: 100px;
-    height: 100px;
-    border: 1px solid;
 }
 /*------------code division--------------*/
 #code-division {
@@ -115,7 +115,7 @@
     overflow: scroll;
     -ms-overflow-style: none; /* IE and Edge */
     width: inherit;
-    height: 500px;
+    height: 700px;
     border: 1px solid
 }
 

@@ -28,10 +28,10 @@ jQuery(function ($) {
 			readOnly: false,
 			// ---------------------------------------------------
 
-			defaultLinkColor: 'black',
+			defaultLinkColor: '#000000',
             defaultSelectedLinkColor: '#3366ff',
             defaultOpGroupColor: 'black',
-            defaultSelectedOpGroupColor: '#3366ff',
+            //defaultSelectedOpGroupColor: '#3366ff',
             linkWidth: 10,
             grid: 20,
             multipleLinksOnOutput: false,
@@ -56,8 +56,8 @@ jQuery(function ($) {
             onOperatorMouseOut: function (operatorId) {
                 return true;
             },
-            onOperatorMoved: function (operatorId, position) {
-
+            onOperatorMoved: function (operatorId, opData) {
+                return true;
             },
             onLinkCreate: function (linkId, linkData) {
                 return true;
@@ -74,7 +74,7 @@ jQuery(function ($) {
             onOpGroupCreate: function (opGroupId, opGroupData) {
                 return true;
             },
-            onOpGroupDelete: function (opGroupId, forced) {
+            onOpGroupDelete: function (opGroupId) {
                 return true;
             },
             onOpGroupSelect: function (opGroupId) {
@@ -209,8 +209,15 @@ jQuery(function ($) {
 			// ---------------------------------------------------
 
             this.objs.layers.operators.on('pointerdown mousedown touchstart', '.flowchart-operator', function (e) {
-                console.log("pointerdown");
                e.stopImmediatePropagation();
+            });
+
+            this.objs.layers.operators.on('mouseover', '.flowchart-operator', function (e) {
+                self._operatorMouseOver($(this).data('operator_id'));
+            });
+
+            this.objs.layers.operators.on('mouseout', '.flowchart-operator', function (e) {
+                self._operatorMouseOut($(this).data('operator_id'));
             });
 
             this.objs.layers.operators.on('click', '.flowchart-operator', function (e) {
@@ -226,15 +233,7 @@ jQuery(function ($) {
                 }
             });
 
-            this.objs.layers.operators.on('mouseover', '.flowchart-operator', function (e) {
-                self._operatorMouseOver($(this).data('operator_id'));
-            });
-
-            this.objs.layers.operators.on('mouseout', '.flowchart-operator', function (e) {
-                self._operatorMouseOut($(this).data('operator_id'));
-            });
-
-            this.objs.layers.links.on('mousedown touchstart', '.flowchart-link', function (e) {
+            this.objs.layers.links.on('pointerdown mousedown touchstart', '.flowchart-link', function (e) {
                 e.stopImmediatePropagation();
             });
 
@@ -249,50 +248,36 @@ jQuery(function ($) {
 			this.objs.layers.links.on('click', '.flowchart-link', function () {
                 self.selectLink($(this).data('link_id'));
             });
-
-			this.objs.layers.opGroups.on('pointerdown mousedown touchstart', '.flowchart-opGroup', function (e) {
-			    e.stopImmediatePropagation();
-			    self.holdOpGroup($(this).data('opGroup_id'));
-			});
-
-			this.objs.layers.opGroups.on('pointerup mouseup touchstop', '.flowchart-opGroup', function (e) {
-			    //e.stopImmediatePropagation();
-			    self.releaseOpGroup($(this).data('opGroup_id'));
-			});
-
+                        
             this.objs.layers.opGroups.on('mouseover', '.flowchart-opGroup', function () {
-                self._opGroupBorderMouseOver($(this).data('opGroup_id'));
+                self._opGroupMouseOver($(this).data('opGroup_id'));
             });
 
             this.objs.layers.opGroups.on('mouseout', '.flowchart-opGroup', function () {
-                self._opGroupBorderMouseOut($(this).data('opGroup_id'));
+                self._opGroupMouseOut($(this).data('opGroup_id'));
             });
 
             this.objs.layers.opGroups.on('click', '.flowchart-opGroup', function () {
                 self.selectOpGroup($(this).data('opGroup_id'));
             });
-
-        },
-
-        holdOpGroup: function (opGroupId) {
-            var opGroupData = this.data.opGroups[opGroupId];
-            console.log("holdOpGroup");
-            //console.log(opGroupData);
-            var rect = opGroupData.internal.els.rect;
-        },
-
-        releaseOpGroup: function(opGroupId){
-            console.log("releaseOpGroup " + opGroupId);
-
+            
         },
 
         setData: function (data) {
             this._clearOperatorsLayer();
+            this._clearOpGroupsLayer();
+
             this.data.operatorTypes = {};
             if (typeof data.operatorTypes != 'undefined') {
                 this.data.operatorTypes = data.operatorTypes;
             }
 
+            this.data.opGroups = {};
+            for (var opGroupId in data.opGroups) {
+                if (data.opGroups.hasOwnProperty(opGroupId)) {
+                    this.createOpGroup(opGroupId, data.opGroups[opGroupId]);
+                }
+            }
             this.data.operators = {};
             for (var operatorId in data.operators) {
                 if (data.operators.hasOwnProperty(operatorId)) {
@@ -437,6 +422,10 @@ jQuery(function ($) {
             this.objs.layers.operators.empty();
         },
 
+        _clearOpGroupsLayer: function () {
+            this.objs.layers.opGroups.empty();
+        },
+
         getConnectorPosition: function (operatorId, connectorId, subConnector) {
             var operatorData = this.data.operators[operatorId];
             var $connector = operatorData.internal.els.connectorArrows[connectorId][subConnector];
@@ -448,6 +437,19 @@ jQuery(function ($) {
             var y = (connectorOffset.top - elementOffset.top - 1) / this.positionRatio + parseInt($connector.css('border-left-width'), 10);
 
             return {x: x, width: width, y: y};
+        },
+
+        getLinkInfos: function (linkId) {
+            var color = this.getLinkMainColor(linkId);
+            var linkData = this.data.links[linkId];
+            return [color, linkData.fromOperator, linkData.toOperator, linkData.constraint0, linkData.constraint1];
+        },
+
+        setLinkConstraint: function (linkId, constraintInput0, constraintInput1) {
+            var linkData = this.data.links[linkId];
+            linkData.constraint0 = constraintInput0;
+            linkData.constraint1 = constraintInput1;
+            linkData.internal.els.text.innerHTML = "[" + linkData.constraint0 + "," + linkData.constraint1 + "]";
         },
 
         getLinkMainColor: function (linkId) {
@@ -559,6 +561,17 @@ jQuery(function ($) {
             return [fromSubConnector, toSubConnector];
         },
 
+        refreshLinkPositionsByOperatorId: function (operatorId) {
+            for (var linkId in this.data.links) {
+                if (this.data.links.hasOwnProperty(linkId)) {
+                    var linkData = this.data.links[linkId];
+                    if (linkData.fromOperator == operatorId || linkData.toOperator == operatorId) {
+                        this._refreshLinkPositions(linkId);
+                    }
+                }
+            }
+        },
+
         _refreshLinkPositions: function (linkId) {
             var linkData = this.data.links[linkId];
 
@@ -605,7 +618,8 @@ jQuery(function ($) {
                 linkData.internal.els.rect.setAttribute("x", fromX - 1 + this.options.linkWidth / 2);
                 linkData.internal.els.text.setAttribute("x", (fromX + toX) / 2 + 10);
                 linkData.internal.els.text.setAttribute("y", (fromY + toY) / 2 + 10);
-                linkData.internal.els.text.innerHTML = "[1, 1]";
+                if (linkData.constraint0 != null && linkData.constraint1 != null)
+                    linkData.internal.els.text.innerHTML = "[" + linkData.constraint0 + "," + linkData.constraint1 + "]";
             } else {
                 bezierFromX = (fromX + offsetFromX + distanceFromArrow);
                 bezierToX = toX + 1;
@@ -765,12 +779,77 @@ jQuery(function ($) {
         },
 
         addOperator: function (operatorData) {
+            console.log(this.data.operators);
             while (typeof this.data.operators[this.operatorNum] != 'undefined') {
                 this.operatorNum++;
             }
 
             this.createOperator(this.operatorNum, operatorData);
             return this.operatorNum;
+        },
+
+        
+        resizeCanvas: function () {
+            var mostBottomOperatorTop = 0;
+            var mostRightOperatorLeft = 0;
+
+            for (var opId in this.data.operators) {
+                var opData = this.data.operators[opId];
+                mostBottomOperatorTop = opData.top > mostBottomOperatorTop ? opData.top : mostBottomOperatorTop;
+                mostRightOperatorLeft = opData.left > mostRightOperatorLeft ? opData.left : mostRightOperatorLeft;
+            }
+
+            var newHeight = mostBottomOperatorTop + parseFloat(this.data.operators['ROOT'].internal.els.operator.css('height'));
+            var newWidth = mostRightOperatorLeft + parseFloat(this.data.operators['ROOT'].internal.els.operator.css('width'));
+
+            var rootOpGroup = this.data.opGroups["ROOT_0"];
+            var opGroupBottom = rootOpGroup.geometric.rect_y + rootOpGroup.geometric.rect_height;
+            var opGroupRight = rootOpGroup.geometric.rect_x + rootOpGroup.geometric.rect_width;
+
+            if (this.data.opGroups["ROOT_1"] != null) {
+                rootOpGroup = this.data.opGroups["ROOT_1"];
+                var root1_bottom = rootOpGroup.geometric.rect_y + rootOpGroup.geometric.rect_height;
+                var root1_right = rootOpGroup.geometric.rect_x + rootOpGroup.geometric.rect_width;
+                opGroupBottom = root1_bottom > opGroupBottom ? root1_bottom : opGroupBottom;
+                opGroupRight = root1_right > opGroupRight ? root1_right : opGroupRight;
+            }
+
+            newHeight = newHeight > opGroupBottom ? newHeight : opGroupBottom;
+            newWidth = newWidth > opGroupRight ? newWidth : opGroupRight;
+
+            var minHeight = $('#flowchartwindow').height();
+            var minWidth = $('#flowchartwindow').width();
+            var currentHight = parseFloat($('.flowchart-container').css('height'));
+            var currentWidth = parseFloat($('.flowchart-container').css('width'));
+
+            newHeight = newHeight + 300;
+            newWidth = newWidth + 300;
+
+            if (newWidth > minWidth) {
+                $('.flowchart-container').css('width', newWidth);
+                $('.flowchart-operators-layer').css('width', newWidth);
+                $('.flowchart-links-layer').css('width', newWidth);
+                $('.flowchart-opGroups-layer').css('width', newWidth);
+            } else if (currentWidth != minWidth) {
+                newWidth = minWidth;
+                $('.flowchart-container').css('width', newWidth);
+                $('.flowchart-operators-layer').css('width', newWidth);
+                $('.flowchart-links-layer').css('width', newWidth);
+                $('.flowchart-opGroups-layer').css('width', newWidth);
+            }
+
+            if (newHeight > minHeight) {
+                $('.flowchart-container').css('height', newHeight);
+                $('.flowchart-operators-layer').css('height', newHeight);
+                $('.flowchart-links-layer').css('height', newHeight);
+                $('.flowchart-opGroups-layer').css('height', newHeight);
+            } else if (currentHight != minHeight) {
+                newHeight = minHeight;
+                $('.flowchart-container').css('height', newHeight);
+                $('.flowchart-operators-layer').css('height', newHeight);
+                $('.flowchart-links-layer').css('height', newHeight);
+                $('.flowchart-opGroups-layer').css('height', newHeight);
+            }
         },
 
         createOperator: function (operatorId, operatorData) {
@@ -782,13 +861,32 @@ jQuery(function ($) {
                 return false;
             }
 
+            //place operator into parentSubgroup
+            /*
+                                ROOT                      LOOPb (whose parent is LOOPa)            
+            headNode   "ROOT".opGroup: "ROOT_0"          "LOOPb".opGroup: "LOOPa_0"
+            entry      "ROOT_0".opGroup: "ROOT_0"        "LOOPb_0".opGroup: "LOOPb_0"
+            All headNodes and entries don't need to be relocated. 
+            */
+            var parentOpGroup = this.data.opGroups[operatorData.opGroup];
+
+            if (operatorData.properties.title != "ROOT") {
+                parentOpGroup.childNode.push(operatorId);
+            }
+
+            if (operatorData.properties.title.startsWith("Op_")) {
+                var opGroupTop = parseInt(parentOpGroup.internal.els.rect.css('top'));
+                var opGroupLeft = parseInt(parentOpGroup.internal.els.rect.css('left'));
+                operatorData.top = opGroupTop + 100;
+                operatorData.left = opGroupLeft + 100;
+            }
+
             var grid = this.options.grid;
 
             if (grid) {
                 operatorData.top = Math.round(operatorData.top / grid) * grid;
                 operatorData.left = Math.round(operatorData.left / grid) * grid;
             }
-
 			// ---------------------------------------------------
 			// RGT
 			var xScroll = this.element.scrollLeft() / this.positionRatio;
@@ -796,8 +894,7 @@ jQuery(function ($) {
 			operatorData.left += xScroll;
 			operatorData.top += yScroll;
 			// ---------------------------------------------------
-
-            fullElement.operator.appendTo(this.objs.layers.operators);
+			fullElement.operator.appendTo(this.objs.layers.operators);
             fullElement.operator.css({top: operatorData.top, left: operatorData.left});
             fullElement.operator.data('operator_id', operatorId);
 
@@ -809,62 +906,15 @@ jQuery(function ($) {
             }
 
             var self = this;
+            var pointerX;
+            var pointerY;
 
-            function operatorChangedPosition(operator_id, pos) {
-                var newHeight = pos.top;
-                var newWidth = pos.left;
-                var currentHight = parseFloat($('.flowchart-operators-layer').css('height'));
-                var currentWidth = parseFloat($('.flowchart-operators-layer').css('width'));
-                var minHeight = $('#flowchartwindow').height();
-                var minWidth = $('#flowchartwindow').width();
-
-                //console.log(pos);
-                //console.log(currentHight, currentWidth);
-
+            function operatorChangedPosition(operator_id, pos, isStopped) {
                 operatorData.top = pos.top;
                 operatorData.left = pos.left;
 
-                for (var operatorId in self.data.operators) {
-                    if (self.data.operators.hasOwnProperty(operatorId)) {
-                        var opData = self.data.operators[operatorId];
-                        newHeight = newHeight > opData.top ? newHeight : opData.top;
-                        newWidth = newWidth > opData.left ? newWidth : opData.left;
-                    }
-                }
-
-                newHeight = newHeight + 300;
-                newWidth = newWidth + 300;
-
+                self.resizeCanvas();
                 /*
-                $('.flowchart-operators-layer').css('height', newHeight);
-                $('.flowchart-links-layer').css('height', newHeight);
-
-                $('.flowchart-operators-layer').css('width', newWidth);
-                $('.flowchart-links-layer').css('width', newWidth);
-                */
-
-                if (newHeight > minHeight) {
-                    $('.flowchart-container').css('height', newHeight);
-                    $('.flowchart-operators-layer').css('height', newHeight);
-                    $('.flowchart-links-layer').css('height', newHeight);
-                } else if (currentHight != minHeight) {
-                    newHeight = minHeight;
-                    $('.flowchart-container').css('height', newHeight);
-                    $('.flowchart-operators-layer').css('height', newHeight);
-                    $('.flowchart-links-layer').css('height', newHeight);
-                }
-
-                if (newWidth > minWidth) {
-                    $('.flowchart-container').css('width', newWidth);
-                    $('.flowchart-operators-layer').css('width', newWidth);
-                    $('.flowchart-links-layer').css('width', newWidth);
-                } else if (currentWidth != minWidth) {
-                    newWidth = minWidth;
-                    $('.flowchart-container').css('width', newWidth);
-                    $('.flowchart-operators-layer').css('width', newWidth);
-                    $('.flowchart-links-layer').css('width', newWidth);
-                }
-                
                 for (var linkId in self.data.links) {
                     if (self.data.links.hasOwnProperty(linkId)) {
                         var linkData = self.data.links[linkId];
@@ -873,13 +923,100 @@ jQuery(function ($) {
                         }
                     }
                 }
+                */
+                self.refreshLinkPositionsByOperatorId(operator_id);
+
+                //change opGroup
+                if (!isStopped || operatorData.properties.title == "ROOT" || operatorData.properties.title == operatorData.opGroup) {
+                    //do nothing before movement is stopped or ROOT node is moved or entry node is moved
+                    return;
+                }
+
+                //operator or headnode is moved 
+                var destOpGrId = null;
+                var destOpGrWidth = parseFloat($('.flowchart-container').css('width'));
+                var destOpGrHeight = parseFloat($('.flowchart-container').css('height'));
+                var opWidth = parseInt(operatorData.internal.els.operator.css('width'));
+                var opHeight = parseInt(operatorData.internal.els.operator.css('height'));
+                for (var opGrId in self.data.opGroups) {
+                    var opGrData = self.data.opGroups[opGrId];
+                    if (opGrData.geometric.rect_x < operatorData.left
+                        && opGrData.geometric.rect_y < operatorData.top
+                        && (opGrData.geometric.rect_x + opGrData.geometric.rect_width) > (operatorData.left + opWidth)
+                        && (opGrData.geometric.rect_y + opGrData.geometric.rect_height) > (operatorData.top + opHeight)
+                        && opGrData.geometric.rect_width < destOpGrWidth//to avoid the parent group of [destOpGrId]
+                        && opGrData.geometric.rect_height < destOpGrHeight) {
+                        destOpGrId = opGrId;
+                        destOpGrWidth = opGrData.geometric.rect_width;
+                        destOpGrHeight = opGrData.geometric.rect_height;
+                    }
+                }
+
+                if (destOpGrId != null && operatorData.opGroup == destOpGrId) {
+                    //it is moved within the same group
+                    return;
+                }
+
+                //remove the operator from parent group
+                self.removeOperatorFromParentList(operator_id);
+                operatorData.opGroup = "";
+                operatorData.internal.els.operator.addClass("noGroup");
+
+                //check if the operator is a headnode
+                if (!operatorData.properties.title.startsWith("Op_")) {
+                    //remove subgroup from their parent group
+                    var opGr_0 = self.data.opGroups[operatorData.properties.title + "_0"];
+                    self.removeOpGroupFromParentList(opGr_0.title);
+                    opGr_0.parent = "";
+                    opGr_0.internal.els.rect.addClass("noGroup");
+                    
+
+                    var opGr_1 = self.data.opGroups[operatorData.properties.title + "_1"];
+                    if (typeof (opGr_1) != "undefined") {
+                        self.removeOpGroupFromParentList(opGr_1.title);
+                        opGr_1.parent = "";
+                        opGr_1.internal.els.rect.addClass("noGroup");
+                    }
+                }
+
+                //check if destOpId is valid
+                if (destOpGrId == null) {
+                    return;
+                }
+
+                if (!operatorData.properties.title.startsWith("Op_")) {
+                    var dialogText = "Move headnode " + operator_id + " together with its subgroup " + opGr_0.title + " to group " + destOpGrId + "?";
+
+                    if (typeof (opGr_1) != "undefined") {
+                        dialogText = "Move headnode " + operator_id + " together with its subgroups " + opGr_0.title + " and " + opGr_1.title + " to group " + destOpGrId + "?";
+                    }
+
+                    if (confirm(dialogText)) {
+                        operatorData.opGroup = destOpGrId;
+                        self.data.opGroups[destOpGrId].childNode.push(operator_id);
+                        operatorData.internal.els.operator.removeClass("noGroup");
+
+                        opGr_0.parent = destOpGrId;
+                        self.data.opGroups[destOpGrId].childGroup.push(opGr_0.title);
+                        opGr_0.internal.els.rect.removeClass("noGroup");
+
+                        if (typeof (opGr_1) != "undefined") {
+                            opGr_1.parent = destOpGrId;
+                            self.data.opGroups[destOpGrId].childGroup.push(opGr_1.title);
+                            opGr_1.internal.els.rect.removeClass("noGroup");
+                        }
+                    }
+                } else if (confirm("Move operator " + operator_id + " to group " + destOpGrId + "?")) {
+                    operatorData.opGroup = destOpGrId;
+                    self.data.opGroups[destOpGrId].childNode.push(operator_id);
+                    operatorData.internal.els.operator.removeClass("noGroup");
+                }
             }
 
             // Small fix has been added in order to manage eventual zoom
             // http://stackoverflow.com/questions/2930092/jquery-draggable-with-zoom-problem
             if (this.options.canUserMoveOperators) {
-                var pointerX;
-                var pointerY;
+                
                 fullElement.operator.draggable({
                     containment: operatorData.internal.properties.uncontained ? false : this.element,
                     handle: '.flowchart-operator-title, .flowchart-operator-body',
@@ -895,6 +1032,15 @@ jQuery(function ($) {
                             return;
                         }
                         var elementOffset = self.element.offset();
+                        /*
+                        console.log("------------------");
+                        console.log(e.pageX);
+                        console.log(elementOffset.left);
+                        console.log(parseInt($(e.target).css('left'), 10));
+                        console.log(ui.position.left);
+                        console.log(ui.offset.left);
+                        */
+                        //pointerX: the distance between element left edge and where mouse click under original scale
                         pointerX = (e.pageX - elementOffset.left) / self.positionRatio - parseInt($(e.target).css('left'), 10);
                         pointerY = (e.pageY - elementOffset.top) / self.positionRatio - parseInt($(e.target).css('top'), 10);
                     },
@@ -902,27 +1048,32 @@ jQuery(function ($) {
                         if (self.options.grid) {
                             var grid = self.options.grid;
 
+                            if (self.positionRatio < 1) {
+                                grid = Math.round(grid / self.positionRatio / self.positionRatio);
+                            }
+                            //console.log("new grid: " + grid);
 							// Save the original left and right so we can calculate the change...
-							var uiLeft = ui.position.left;
-							var uiTop = ui.position.top;
+							//var uiLeft = ui.position.left;
+							//var uiTop = ui.position.top;
 
-                            var elementOffset = self.element.offset();
+							var elementOffset = self.element.offset();
+                            //set ui.position.left to (the distance of element left edge to parent left under original scale after grid)
                             ui.position.left = Math.round(((e.pageX - elementOffset.left) / self.positionRatio - pointerX) / grid) * grid;
 							ui.position.top = Math.round(((e.pageY - elementOffset.top) / self.positionRatio - pointerY) / grid) * grid;
                             
 
                             if (!operatorData.internal.properties.uncontained) {
-                                var $this = $(this);
-
+                                ui.position.left = Math.max(ui.position.left, 0);
+                                ui.position.top = Math.max(ui.position.top, 0);
 								// ---------------------------------------------------
-								// RGT
 								// Stop it from going too far left or too far right...
-                                ui.position.left = Math.min(Math.max(ui.position.left, 0), self.objs.layers.operators.width() - (fullElement.operator[0].offsetWidth + 20));
+                                //ui.position.left = Math.min(Math.max(ui.position.left, 0), self.objs.layers.operators.width() - (fullElement.operator[0].offsetWidth + 20));
 								// .. same with the top...
-                                ui.position.top = Math.min(Math.max(ui.position.top, 0), self.objs.layers.operators.height() - (fullElement.operator[0].offsetHeight));
+                                //ui.position.top = Math.min(Math.max(ui.position.top, 0), self.objs.layers.operators.height() - (fullElement.operator[0].offsetHeight));
 								// ---------------------------------------------------
                             }
                             
+                            //element left to parent element left + parent element left to document left
 							ui.offset.left = Math.round(ui.position.left + elementOffset.left);
                             ui.offset.top = Math.round(ui.position.top + elementOffset.top);
 
@@ -958,23 +1109,23 @@ jQuery(function ($) {
 									self.data.operators[operator._operatorID].top = currentPosition.top;
 
 									// Trigger the link redraws...
-									operatorChangedPosition(operator._operatorID, currentPosition);
+									operatorChangedPosition(operator._operatorID, currentPosition, false);
 								});
 							}
 							// ---------------------------------------------------
                         }
 						// Need to somehow change the positions of all of the operators in the drag select list...
-                        operatorChangedPosition($(this).data('operator_id'), ui.position);
+                        operatorChangedPosition($(this).data('operator_id'), ui.position, false);
                    },
                     stop: function (e, ui) {
                         self._unsetTemporaryLink();
                         var operatorId = $(this).data('operator_id');
-                        operatorChangedPosition(operatorId, ui.position);
+                        operatorChangedPosition(operatorId, ui.position, true);
                         fullElement.operator.css({
                             height: 'auto'
                         });
 
-                        self.callbackEvent('operatorMoved', [operatorId, ui.position]);
+                        self.callbackEvent('operatorMoved', [operatorId, self.data.operators[operatorId]]);
                         self.callbackEvent('afterChange', ['operator_moved']);
                     }
                 });
@@ -988,35 +1139,552 @@ jQuery(function ($) {
             if (!this.callbackEvent('opGroupCreate', [opGroupId, opGroupData])) {
                 return;
             }
-            this.data.opGroups[opGroupId] = opGroupData;
-            this._drawOpGroup(opGroupId);
-
-            this.callbackEvent('afterChange', ['opGroup_create']);
-        },
-
-        _drawOpGroup: function (opGroupId) {
-            var opGroupData = this.data.opGroups[opGroupId];
 
             if (typeof opGroupData.internal == 'undefined') {
                 opGroupData.internal = {};
             }
             opGroupData.internal.els = {};
 
-            /*
-            var rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            rect.setAttribute("x", opGroupData.geometric.rect_x);
-            rect.setAttribute("y", opGroupData.geometric.rect_y);
-            rect.setAttribute("width", opGroupData.geometric.rect_width);
-            rect.setAttribute("height", opGroupData.geometric.rect_height);
-            rect.setAttribute("stroke", this.options.defaultOpGroupColor);
-            rect.setAttribute("stroke-width", "2");
-            rect.setAttribute("fill", "none");
-            rect.setAttribute('class', 'flowchart-opGroup');
-            //rect.setAttribute('data-opGroup_id', opGroupId); //This doesn't work somehow!?
-            rect.dataset.opGroup_id = opGroupId;
-            this.objs.layers.opGroups[0].appendChild(rect);
-            opGroupData.internal.els.rect = rect;
-            */
+            var self = this;
+
+            var $opGroupRect = $('<div class="flowchart-opGroup"></div>');
+            $opGroupRect.appendTo(this.objs.layers.opGroups);
+            if (opGroupId.slice(-1) == 0 && !opGroupId.startsWith("ROOT")) {
+                console.log("New opGroup: " + opGroupId);//LOOP1_0
+                //place group into parentSubgroup
+
+                var parentOpGroup = this.data.opGroups[opGroupData.parent];
+                parentOpGroup.childGroup.push(opGroupId);
+                var parentOpGroupWidth = parseInt(parentOpGroup.internal.els.rect.css('width'));
+                var parentOpGroupHeight = parseInt(parentOpGroup.internal.els.rect.css('height'));
+                opGroupData.geometric.rect_y = parseInt(parentOpGroup.internal.els.rect.css('top')) + parentOpGroupHeight;
+                opGroupData.geometric.rect_x = parseInt(parentOpGroup.internal.els.rect.css('left')) + parentOpGroupWidth;
+
+                //extend parent group size until ROOT
+                while (!parentOpGroup.title.startsWith("ROOT")) {
+                    parentOpGroup.geometric.rect_width = parentOpGroupWidth + opGroupData.geometric.rect_width + 10;
+                    parentOpGroup.geometric.rect_height = parentOpGroupHeight + opGroupData.geometric.rect_height + 10;
+
+                    parentOpGroup.internal.els.rect.css({ width: parentOpGroup.geometric.rect_width, height: parentOpGroup.geometric.rect_height });
+
+                    parentOpGroup = this.data.opGroups[parentOpGroup.parent];
+
+                    parentOpGroupWidth = parseInt(parentOpGroup.internal.els.rect.css('width'));
+                    parentOpGroupHeight = parseInt(parentOpGroup.internal.els.rect.css('height'));
+                } 
+
+                //extend ROOT group
+                parentOpGroup.geometric.rect_width = parentOpGroupWidth + opGroupData.geometric.rect_width + 10;
+                parentOpGroup.geometric.rect_height = parentOpGroupHeight + opGroupData.geometric.rect_height + 10;
+
+                parentOpGroup.internal.els.rect.css({ width: parentOpGroup.geometric.rect_width, height: parentOpGroup.geometric.rect_height });
+                
+                //move other elements on the right and the bottom
+                for (var opId in self.data.operators) {
+                    var isOpMoved = false;
+                    var opData = self.data.operators[opId];
+                    if (opData.left > opGroupData.geometric.rect_x ) {
+                        opData.left = opData.left + opGroupData.geometric.rect_width + 10;
+                        opData.internal.els.operator.css({ left: opData.left });
+                        isOpMoved = true;
+                    }
+
+                    if (opData.top > opGroupData.geometric.rect_y) {
+                        opData.top = opData.top + opGroupData.geometric.rect_height + 10;
+                        opData.internal.els.operator.css({ top: opData.top });
+                        isOpMoved = true;
+                    }
+
+                    if (isOpMoved != true) {
+                        continue;
+                    }
+
+                    //console.log(opId + "is pushed right or(and) down!");
+                    /*
+                    for (var linkId in self.data.links) {
+                        if (self.data.links.hasOwnProperty(linkId)) {
+                            var linkData = self.data.links[linkId];
+                            if (linkData.fromOperator == opId || linkData.toOperator == opId) {
+                                self._refreshLinkPositions(linkId);
+                            }
+                        }
+                    }
+                    */
+                    self.refreshLinkPositionsByOperatorId(opId);
+                }
+
+                for (var opGrId in self.data.opGroups) {
+                    var opGrData = self.data.opGroups[opGrId];
+                    if (opGrData.geometric.rect_x > opGroupData.geometric.rect_x) {
+                        opGrData.geometric.rect_x = opGrData.geometric.rect_x + opGroupData.geometric.rect_width + 10;
+                        opGrData.internal.els.rect.css({ left: opGrData.geometric.rect_x });
+                    }
+
+                    if (opGrData.geometric.rect_y > opGroupData.geometric.rect_y) {
+                        opGrData.geometric.rect_y = opGrData.geometric.rect_y + opGroupData.geometric.rect_height + 10;
+                        opGrData.internal.els.rect.css({ top: opGrData.geometric.rect_y });
+                    }
+                }
+
+            } else if (opGroupId.slice(-1) == 1) {
+                var siblingOpGroup = this.data.opGroups[opGroupId.slice(0, -2) + "_0"];
+                opGroupData.geometric.rect_y = parseInt(siblingOpGroup.internal.els.rect.css('top'));
+                opGroupData.geometric.rect_x = parseInt(siblingOpGroup.internal.els.rect.css('left')) + parseInt(siblingOpGroup.internal.els.rect.css('width')) + 10;
+
+                var parentOpGroup = this.data.opGroups[opGroupData.parent];
+                if (!opGroupId.startsWith("ROOT")) {
+                    parentOpGroup.childGroup.push(opGroupId);
+                }
+                var parentOpGroupWidth = parseInt(parentOpGroup.internal.els.rect.css('width'));
+
+                //extend parent group size until ROOT
+                while (!parentOpGroup.title.startsWith("ROOT")) {
+                    parentOpGroup.geometric.rect_width = parentOpGroupWidth + opGroupData.geometric.rect_width + 10;
+
+                    parentOpGroup.internal.els.rect.css({ width: parentOpGroup.geometric.rect_width});
+
+                    parentOpGroup = this.data.opGroups[parentOpGroup.parent];
+
+                    parentOpGroupWidth = parseInt(parentOpGroup.internal.els.rect.css('width'));
+                }
+
+                //extend ROOT group
+                if (!opGroupId.startsWith("ROOT")) {
+                    parentOpGroup.geometric.rect_width = parentOpGroupWidth + opGroupData.geometric.rect_width + 10;
+                    parentOpGroup.internal.els.rect.css({ width: parentOpGroup.geometric.rect_width });
+                }
+
+                //move other elements on the right
+                for (var opId in self.data.operators) {
+                    var opData = self.data.operators[opId];
+                    if (opData.left > opGroupData.geometric.rect_x) {
+                        opData.left = opData.left + opGroupData.geometric.rect_width + 10;
+                        opData.internal.els.operator.css({ left: opData.left });
+                        /*
+                        for (var linkId in self.data.links) {
+                            if (self.data.links.hasOwnProperty(linkId)) {
+                                var linkData = self.data.links[linkId];
+                                if (linkData.fromOperator == opId || linkData.toOperator == opId) {
+                                    self._refreshLinkPositions(linkId);
+                                }
+                            }
+                        }
+                        */
+                        self.refreshLinkPositionsByOperatorId(opId);
+                    }
+                }
+
+                for (var opGrId in self.data.opGroups) {
+                    var opGrData = self.data.opGroups[opGrId];
+                    if (opGrData.geometric.rect_x > opGroupData.geometric.rect_x) {
+                        //console.log(opGrId + "is on the right");
+                        opGrData.geometric.rect_x = opGrData.geometric.rect_x + opGroupData.geometric.rect_width + 10;
+                        opGrData.internal.els.rect.css({ left: opGrData.geometric.rect_x });
+                    }
+                }
+            }
+
+            $opGroupRect.css({
+                top: opGroupData.geometric.rect_y,
+                left: opGroupData.geometric.rect_x,
+                width: opGroupData.geometric.rect_width,
+                height: opGroupData.geometric.rect_height,
+                fill: "none"
+            });
+
+            $opGroupRect.data('opGroup_id', opGroupId);
+            opGroupData.internal.els.rect = $opGroupRect;
+            opGroupData.isPainted = true;
+
+            this.data.opGroups[opGroupId] = opGroupData;
+
+            //Parepare headnode and entry
+            var opGroupTop = parseInt(opGroupData.internal.els.rect.css('top'));
+            var opGroupLeft = parseInt(opGroupData.internal.els.rect.css('left'));
+
+            if (opGroupId.slice(-1) == 0) {
+                opGroupData.headNode.top = opGroupTop - 60;
+                opGroupData.headNode.left = opGroupLeft;
+                this.createOperator(opGroupData.headNode.properties.title, opGroupData.headNode);
+            }
+
+            opGroupData.entry.top = opGroupTop + 10;
+            opGroupData.entry.left = opGroupLeft + 10;
+            this.createOperator(opGroupData.entry.properties.title, opGroupData.entry);
+            opGroupData.internal.els.entry = this.data.operators[opGroupData.entry.properties.title].internal.els.operator;
+
+
+            function opGroupResize(opGroup_id, newSize) {
+                opGroupData.geometric.rect_width = newSize.width;
+                opGroupData.geometric.rect_height = newSize.height;
+
+                self.resizeCanvas();
+            }
+
+            var isInfiniteFreeSpace = false;
+            var freeSpace = -1;
+            var opGroupsAncestor = [];
+            var opGroupsOutsideFreeSpace = [];
+            var operatorsOutsideFreeSpace = [];
+            $opGroupRect.resizable({
+                handles: 'e, s',
+                distance: 30,
+                resize: function (event, ui) {
+                    if (!isInfiniteFreeSpace && freeSpace == -1) {
+                        if (ui.size.width > ui.originalSize.width) {
+                            freeSpace = parseFloat($('.flowchart-container').css('width'));
+                            console.log("right");
+                            //get all element on the right
+                            for (var opId in self.data.operators) {
+                                var opData = self.data.operators[opId];
+                                var distance = opData.left - (ui.originalPosition.left + ui.originalSize.width);
+                                //console.log("[Start] Check op: " + opId + "; opLeft(" + opData.left + ") - rightBorder(" + (ui.originalPosition.left + ui.originalSize.width) + ") = distance(" + distance + ")");
+                                //console.log("opData.top(" + opData.top + ") > topBorder(" + ui.originalPosition.top + ")?");
+                                //console.log("opData.top(" + opData.top + ") < bottomBorder(" + (ui.originalPosition.top + ui.originalSize.height) + ")?");
+                                if ((distance > -1) && (opData.top > ui.originalPosition.top) && (opData.top < (ui.originalPosition.top + ui.originalSize.height))) {
+                                    operatorsOutsideFreeSpace.push(opId);
+                                    //console.log("Distance to " + opId + ": " + distance);
+                                    //console.log("FreeSpace Ori: " + freeSpace);
+                                    freeSpace = distance < freeSpace ? distance : freeSpace;
+                                    //console.log("FreeSpace to " + opId + ": " + freeSpace);
+                                }
+                                //console.log("[End] ----------------------------");
+                            }
+
+                            for (var opGrId in self.data.opGroups) {
+                                var opGrData = self.data.opGroups[opGrId];
+                                //calc the dis
+                                if (opGrData.geometric.rect_x < ui.originalPosition.left
+                                    && opGrData.geometric.rect_y < ui.originalPosition.top
+                                    && (opGrData.geometric.rect_x + opGrData.geometric.rect_width) > (ui.originalPosition.left + ui.originalSize.width)
+                                    && (opGrData.geometric.rect_y + opGrData.geometric.rect_height) > (ui.originalPosition.top + ui.originalSize.height))
+                                {
+                                    opGroupsAncestor.push(opGrId);
+                                }
+                                else if (opGrData.geometric.rect_x > (ui.originalPosition.left + ui.originalSize.width)
+                                    && ((opGrData.geometric.rect_y + opGrData.geometric.rect_height > ui.originalPosition.top) || (opGrData.geometric.rect_y < ui.originalPosition.top + ui.originalSize.height)))
+                                {
+                                    var distance = opGrData.geometric.rect_x - (ui.originalPosition.left + ui.originalSize.width);
+                                    opGroupsOutsideFreeSpace.push(opGrId);
+                                    //console.log("Distance to " + opGrId + ": " + distance);
+                                    //console.log("FreeSpace Ori: " + freeSpace);
+                                    freeSpace = distance < freeSpace ? distance : freeSpace;
+                                    //console.log("FreeSpace to " + opGrId + ": " + freeSpace);
+                                }
+                            }
+                        } else if (ui.size.height > ui.originalSize.height) {
+                            freeSpace = parseFloat($('.flowchart-container').css('height'));
+                            console.log("down");
+                            for (var opId in self.data.operators) {
+                                var opData = self.data.operators[opId];
+                                var distance = opData.top - (ui.originalPosition.top + ui.originalSize.height);
+                                if ((distance > -1) && (opData.left > ui.originalPosition.left) && (opData.left < (ui.originalPosition.left + ui.originalSize.width))) {
+                                    operatorsOutsideFreeSpace.push(opId);
+                                    freeSpace = distance < freeSpace ? distance : freeSpace;
+                                }
+                            }
+
+                            for (var opGrId in self.data.opGroups) {
+                                var opGrData = self.data.opGroups[opGrId];
+                                if (opGrData.geometric.rect_x < ui.originalPosition.left
+                                    && opGrData.geometric.rect_y < ui.originalPosition.top
+                                    && (opGrData.geometric.rect_x + opGrData.geometric.rect_width) > (ui.originalPosition.left + ui.originalSize.width)
+                                    && (opGrData.geometric.rect_y + opGrData.geometric.rect_height) > (ui.originalPosition.top + ui.originalSize.height)) {
+                                    opGroupsAncestor.push(opGrId);
+                                }
+                                else if (opGrData.geometric.rect_y > (ui.originalPosition.top + ui.originalSize.height)
+                                    && ((opGrData.geometric.rect_x + opGrData.geometric.rect_width > ui.originalPosition.left) || (opGrData.geometric.rect_left < ui.originalPosition.left + ui.originalSize.width))) {
+                                    var distance = opGrData.geometric.rect_y - (ui.originalPosition.top + ui.originalSize.height);
+                                    opGroupsOutsideFreeSpace.push(opGrId);
+                                    freeSpace = distance < freeSpace ? distance : freeSpace;
+                                }
+                            }
+
+                        }
+
+                        if (operatorsOutsideFreeSpace.length == 0 && opGroupsAncestor.length == 0 && opGroupsOutsideFreeSpace.length == 0) {
+                            isInfiniteFreeSpace = true;
+                            //console.log("Infinite space!");
+                        } else {
+                            //console.log("FreeSpace: " + freeSpace);
+                            //console.log(operatorsOutsideFreeSpace);
+                            //console.log(opGroupsOutsideFreeSpace);
+                            //console.log(opGroupsAncestor);
+                        }
+                    }
+
+                },
+                stop: function (event, ui) {
+                    //Move operators and opGroups (expand ancester) when the expanded distance larger than the freespace
+                    var margin = 20;
+                    var distance = 0;
+                    var isToTheEast = true;
+
+                    if (ui.size.width > ui.originalSize.width) {
+                        isToTheEast = true;
+                        distance = ui.size.width - ui.originalSize.width;
+                    } else if (ui.size.height > ui.originalSize.height) {
+                        isToTheEast = false;
+                        distance = ui.size.height - ui.originalSize.height;
+                    }
+
+                    //ancester
+                    if (opGroupId.startsWith("ROOT")) {
+                        //do nothing
+                    } else {
+                        for (let i = 0; i < opGroupsAncestor.length; i++) {
+                            var opGr = self.data.opGroups[opGroupsAncestor[i]];
+                            if (isToTheEast) {
+                                var opGrWidthOri = parseInt(opGr.internal.els.rect.css('width'));
+                                opGr.geometric.rect_width = opGrWidthOri + distance;
+                                opGr.internal.els.rect.css({ width: opGrWidthOri + distance });
+                            } else {
+                                var opGrHeightOri = parseInt(opGr.internal.els.rect.css('height'));
+                                opGr.geometric.rect_height = opGrHeightOri + distance;
+                                opGr.internal.els.rect.css({ height: opGrHeightOri + distance });
+                            }
+                            
+                        }
+                    }
+
+                    var limit = Math.max((freeSpace - margin), 0);
+
+                    if (distance > limit) {
+                        var i = 0;
+                        var movedOp = [];
+
+                        for (; i < opGroupsOutsideFreeSpace.length; i++) {
+                            var opGr = self.data.opGroups[opGroupsOutsideFreeSpace[i]];
+                            if (isToTheEast) {
+                                opGrLeftOri = parseInt(opGr.internal.els.rect.css('left'));
+                                opGr.geometric.rect_x = opGrLeftOri + distance - freeSpace + margin;
+                                opGr.internal.els.rect.css({ left: (opGrLeftOri + distance - freeSpace + margin) });
+                            } else {
+                                opGrTopOri = parseInt(opGr.internal.els.rect.css('top'));
+                                opGr.geometric.rect_y = opGrTopOri + distance - freeSpace + margin;
+                                opGr.internal.els.rect.css({ top: (opGrTopOri + distance - freeSpace + margin) });
+                            }
+                            
+
+                            //move operators which are inside of opGroup
+                            for (var opId in self.data.operators) {
+                                var opData = self.data.operators[opId];
+                                //console.log("Check " + opId + "'s " + "parent group(" + opData.opGroup + ") == moved group(" + opGr.title + ")");
+                                if (opData.opGroup == opGr.title) {
+                                    if (isToTheEast) {
+                                        var opLeftOri = parseInt(opData.internal.els.operator.css('left'));
+                                        opData.left = opLeftOri + distance - freeSpace + margin;
+                                        opData.internal.els.operator.css({ left: (opLeftOri + distance - freeSpace + margin) });
+                                    } else {
+                                        var opTopOri = parseInt(opData.internal.els.operator.css('top'));
+                                        opData.top = opTopOri + distance - freeSpace + margin;
+                                        opData.internal.els.operator.css({ top: (opTopOri + distance - freeSpace + margin) });
+                                    }
+                                    movedOp.push(opId);
+                                    /*
+                                    for (var linkId in self.data.links) {
+                                        if (self.data.links.hasOwnProperty(linkId)) {
+                                            var linkData = self.data.links[linkId];
+                                            if (linkData.fromOperator == opId || linkData.toOperator == opId) {
+                                                self._refreshLinkPositions(linkId);
+                                            }
+                                        }
+                                    }
+                                    */
+                                    self.refreshLinkPositionsByOperatorId(opId);
+                                }
+                            }
+                        }
+
+                        for (i = 0; i < operatorsOutsideFreeSpace.length; i++) {
+                            if (movedOp.includes(operatorsOutsideFreeSpace[i])) {
+                                continue;
+                            }
+
+                            var opData = self.data.operators[operatorsOutsideFreeSpace[i]];
+                            if (isToTheEast) {
+                                var opLeftOri = parseInt(opData.internal.els.operator.css('left'));
+                                opData.left = opLeftOri + distance - freeSpace + margin;
+                                opData.internal.els.operator.css({ left: (opLeftOri + distance - freeSpace + margin) });
+                                //console.log("Move " + operatorsOutsideFreeSpace[i] + " to " + opData.internal.els.operator.css('left'));
+                            } else {
+                                var opTopOri = parseInt(opData.internal.els.operator.css('top'));
+                                opData.top = opTopOri + distance - freeSpace + margin;
+                                opData.internal.els.operator.css({ top: (opTopOri + distance - freeSpace + margin) });
+                                //console.log("Move " + operatorsOutsideFreeSpace[i] + " to " + opData.internal.els.operator.css('top'));
+                            }
+                            /*
+                            for (var linkId in self.data.links) {
+                                if (self.data.links.hasOwnProperty(linkId)) {
+                                    var linkData = self.data.links[linkId];
+                                    if (linkData.fromOperator == operatorsOutsideFreeSpace[i] || linkData.toOperator == operatorsOutsideFreeSpace[i]) {
+                                        self._refreshLinkPositions(linkId);
+                                    }
+                                }
+                            }*/
+                            self.refreshLinkPositionsByOperatorId(operatorsOutsideFreeSpace[i]);
+                        }
+                    }
+
+                    opGroupResize($(this).data('opGroup_id'), ui.size);
+                    //reset all variables
+                    isInfiniteFreeSpace = false;
+                    freeSpace = -1;
+                    opGroupsAncestor = [];
+                    opGroupsOutsideFreeSpace = [];
+                    operatorsOutsideFreeSpace = [];
+                }
+            });
+
+            function opGroupChangedPosition(opGroup_id, posVal, offsetVal) {
+
+                opGroupData.geometric.rect_y = posVal.top;
+                opGroupData.geometric.rect_x = posVal.left;
+
+                //move entry together with group
+                var delta_X = posVal.left + 10 - parseInt(opGroupData.internal.els.entry.css('left'));
+                var delta_Y = posVal.top + 10 - parseInt(opGroupData.internal.els.entry.css('top'));
+
+                //move all child operators and child groups together with the triggerring element
+                var opGrId = opGroup_id;
+                var opGrStack = [];
+                var opGrMoved = [];
+
+                opGrStack.push(opGroup_id);
+                while (typeof (opGrId) != "undefined") {
+                    var hasUnmovedChild = false;
+                    var opGrData = self.data.opGroups[opGrId];
+
+                    if (!opGrMoved.includes(opGrId)) {
+                        //move the group itself except the triggerring element 
+                        if (opGrId != opGroup_id) {
+                            opGrData.geometric.rect_x = opGrData.geometric.rect_x + delta_X;
+                            opGrData.geometric.rect_y = opGrData.geometric.rect_y + delta_Y;
+                            opGrData.internal.els.rect.css({ top: opGrData.geometric.rect_y, left: opGrData.geometric.rect_x });
+                        }
+
+                        //move all operators in the group
+                        for (var i = 0; i < opGrData.childNode.length; i++) {
+                            var opId = opGrData.childNode[i];
+                            var opData = self.data.operators[opId];
+                            var oriTop = parseInt(opData.internal.els.operator.css('top'));
+                            var oriLeft = parseInt(opData.internal.els.operator.css('left'));
+                            opData.internal.els.operator.css({ top: oriTop + delta_Y, left: oriLeft + delta_X });
+                            opData.top = parseInt(opData.internal.els.operator.css('top'));
+                            opData.left = parseInt(opData.internal.els.operator.css('left'));
+
+                            /*
+                            for (var linkId in self.data.links) {
+                                if (self.data.links.hasOwnProperty(linkId)) {
+                                    var linkData = self.data.links[linkId];
+                                    if (linkData.fromOperator == opId || linkData.toOperator == opId) {
+                                        self._refreshLinkPositions(linkId);
+                                    }
+                                }
+                            }*/
+                            self.refreshLinkPositionsByOperatorId(opId);
+                        }
+
+                        opGrData.entry.top = parseInt(opGrData.internal.els.entry.css('top'));
+                        opGrData.entry.left = parseInt(opGrData.internal.els.entry.css('left'));
+
+                        opGrMoved.push(opGrId);
+                    }
+                    
+                    for (var j = 0; j < opGrData.childGroup.length; j++) {
+                        if (!opGrMoved.includes(opGrData.childGroup[j])) {
+                            hasUnmovedChild = true;
+                            opGrStack.push(opGrId);
+                            opGrId = opGrData.childGroup[j];
+                            break;
+                        }
+                    }
+
+                    if (hasUnmovedChild == false) {
+                        opGrId = opGrStack.pop();
+                    }
+                }
+
+                opGroupData.entry.top = parseInt(opGroupData.internal.els.entry.css('top'));
+                opGroupData.entry.left = parseInt(opGroupData.internal.els.entry.css('left'));
+
+                self.resizeCanvas();
+            }
+
+            var pointerX;
+            var pointerY;
+            $opGroupRect.draggable({
+                start: function (e, ui) {
+                    var elementOffset = self.element.offset();
+
+                    pointerX = (e.pageX - elementOffset.left) / self.positionRatio - parseInt($(e.target).css('left'), 10);
+                    pointerY = (e.pageY - elementOffset.top) / self.positionRatio - parseInt($(e.target).css('top'), 10);
+                },
+                drag: function (e, ui) {
+                    if (self.options.grid) {
+                        var grid = self.options.grid;
+
+                        // Save the original left and right so we can calculate the change...
+                        var uiLeft = ui.position.left;
+                        var uiTop = ui.position.top;
+
+                        var elementOffset = self.element.offset();
+
+                        ui.position.left = Math.round(((e.pageX - elementOffset.left) / self.positionRatio - pointerX) / grid) * grid;
+                        ui.position.top = Math.round(((e.pageY - elementOffset.top) / self.positionRatio - pointerY) / grid) * grid;
+
+                        // Stop it from going too far left or too far right...
+                        ui.position.left = Math.max(ui.position.left, 0);
+                        // .. same with the top ..
+                        ui.position.top = Math.max(ui.position.top, 0);
+                        
+                        ui.offset.left = Math.round(ui.position.left + elementOffset.left);
+                        ui.offset.top = Math.round(ui.position.top + elementOffset.top);
+
+                    }
+                    opGroupChangedPosition($(this).data('opGroup_id'), ui.position, ui.offset);
+                },
+            });
+            $opGroupRect.draggable("disable");
+
+            var $toggleButton = $('<div class="form-row d-flex flex-row-reverse flowchart-opGroup-toggleButton"><label class="switch"><input type="checkbox"><span class="slider round"></span></label></div>');
+            $toggleButton.appendTo($opGroupRect);
+            $toggleButton.on('change', function (e) {
+                if ($(e.target).is(':checked')) {
+                    $opGroupRect.addClass("flowchart-opGroup-checked");
+                    $opGroupRect.draggable("enable");
+                    self.objs.layers.opGroups.on('pointerdown mousedown touchstart', '.flowchart-opGroup', function (e) {
+                        e.stopImmediatePropagation();
+                    });
+                } else {
+                    $opGroupRect.removeClass("flowchart-opGroup-checked");
+                    $opGroupRect.draggable("disable");
+                    self.objs.layers.opGroups.on('pointerdown mousedown touchstart', '.flowchart-opGroup', function (e) { });
+                    self.unselectOpGroup();
+                }
+            });
+
+            var newLinkId = opGroupData.headNode.properties.title + "_" + opGroupData.entry.properties.title;
+            var newLink = {
+                fromOperator: opGroupData.headNode.properties.title,
+                fromConnector: "output_1",
+                toOperator: opGroupData.entry.properties.title,
+                toConnector: "input_1",
+                constraint0: null,
+                constraint1: null,
+            }
+            this.createLink(newLinkId, newLink);
+
+            this.resizeCanvas();
+
+            //console.log("New group:");
+            //console.log(this.data.opGroups[opGroupId]);
+
+            this.callbackEvent('afterChange', ['opGroup_create']);
+        },
+
+        _drawOpGroup_unused: function (opGroupId) {
+            var opGroupData = this.data.opGroups[opGroupId];
 
             var $opGroupRect = $('<div class="flowchart-opGroup"></div>');
             $opGroupRect.appendTo(this.objs.layers.opGroups);
@@ -1027,10 +1695,70 @@ jQuery(function ($) {
                 height: opGroupData.geometric.rect_height,
                 fill: "none"
             });
+
+            var self = this;
+            var opGroupEntry = this.data.opGroups[opGroupId].internal.els.entry;
+            var pointerX;
+            var pointerY;
+            
+            function opGroupChangedPosition(opGroup_id, pos) {
+                opGroupEntry.top = pos.top + 10;
+                opGroupEntry.left = pos.left + 10;
+
+            }
+            
             $opGroupRect.data('opGroup_id', opGroupId);
             $opGroupRect.resizable({ handles: 'n, e, s, w' });
-            $opGroupRect.draggable();
+            $opGroupRect.draggable({
+                start: function (e, ui) {
+                    var elementOffset = self.element.offset();
+                    pointerX = (e.pageX - elementOffset.left) / self.positionRatio - parseInt($(e.target).css('left'), 10);
+                    pointerY = (e.pageY - elementOffset.top) / self.positionRatio - parseInt($(e.target).css('top'), 10);
+                },
+                drag: function (e, ui) {
+                    if (self.options.grid) {
+                        var grid = self.options.grid;
+
+                        // Save the original left and right so we can calculate the change...
+                        var uiLeft = ui.position.left;
+                        var uiTop = ui.position.top;
+
+                        var elementOffset = self.element.offset();
+                        ui.position.left = Math.round(((e.pageX - elementOffset.left) / self.positionRatio - pointerX) / grid) * grid;
+                        ui.position.top = Math.round(((e.pageY - elementOffset.top) / self.positionRatio - pointerY) / grid) * grid;
+
+                        ui.offset.left = Math.round(ui.position.left + elementOffset.left);
+                        ui.offset.top = Math.round(ui.position.top + elementOffset.top);
+                    }
+                    // Need to somehow change the positions of all of the operators in the drag select list...
+                    opGroupChangedPosition($(this).data('opGroup_id'), ui.position);
+                },
+            });
+            $opGroupRect.draggable("disable");
             opGroupData.internal.els.rect = $opGroupRect;
+
+            //not able to append this <div>.WHY?
+            /*
+            var $dragHandleBar = $('<div class="form-row flowchart-opGroup-dragHandleBar"></div>');
+            $dragHandleBar.appendTo($opGroupRect);
+            */
+            var $toggleButton = $('<div class="form-row d-flex flex-row-reverse flowchart-opGroup-toggleButton"><label class="switch"><input type="checkbox"><span class="slider round"></span></label></div>');
+            $toggleButton.appendTo($opGroupRect);
+            $toggleButton.on('change', function (e) {
+                if ($(e.target).is(':checked')) {
+                    $opGroupRect.addClass("flowchart-opGroup-checked");
+                    $opGroupRect.draggable("enable");
+                    self.objs.layers.opGroups.on('pointerdown mousedown touchstart', '.flowchart-opGroup', function (e) {
+                        e.stopImmediatePropagation();
+                    });
+                } else {
+                    $opGroupRect.removeClass("flowchart-opGroup-checked");
+                    $opGroupRect.draggable("disable");
+                    self.objs.layers.opGroups.on('pointerdown mousedown touchstart', '.flowchart-opGroup', function (e) { });
+                    self.unselectOpGroup();
+                }
+            });
+
         },
 
         selectOpGroup: function (opGroupId) {
@@ -1041,7 +1769,6 @@ jQuery(function ($) {
             this.unselectLink();
             this.unselectOperator();
             this.selectedOpGroupId = opGroupId;
-            this.colorizeOpGroup(opGroupId, this.options.defaultSelectedOpGroupColor);
         },
 
         unselectOpGroup: function () {
@@ -1050,31 +1777,19 @@ jQuery(function ($) {
                 if (!this.callbackEvent('opGroupUnselect', [])) {
                     return;
                 }
-                this.uncolorizeOpGroup(this.selectedOpGroupId, this.options.defaultOpGroupColor);
                 this.selectedOpGroupId = null;
             }
         },
 
-        colorizeOpGroup: function (opGroupId, color) {
-            //console.log("colorizeOpGroup ");
-            //console.log(this.data.opGroups);
-            var opGroupData = this.data.opGroups[opGroupId];
-            //opGroupData.internal.els.rect.setAttribute('stroke', color);
-        },
-
-        uncolorizeOpGroup: function (opGroupId, color) {
-            this.colorizeOpGroup(opGroupId, color);//FIXME
-        },
-
-        _opGroupBorderMouseOver: function (opGroupId) {
+        _opGroupMouseOver: function (opGroupId) {
             if (this.selectedOpGroupId != opGroupId) {
-                this.colorizeOpGroup(opGroupId, this._shadeColor(this.options.defaultSelectedOpGroupColor, -0.4));//FIXME
+
             }
         },
 
-        _opGroupBorderMouseOut: function (opGroupId) {
+        _opGroupMouseOut: function (opGroupId) {
             if (this.selectedOpGroupId != opGroupId) {
-                this.uncolorizeOpGroup(opGroupId, this.options.defaultOpGroupColor);
+
             }
         },
 
@@ -1082,23 +1797,9 @@ jQuery(function ($) {
             var opGroupData = this.data.opGroups[opGroupId];
             var infos = {
                 title: opGroupData.title,
-                parent: opGroupData.parent,
-                geometric: opGroupData.geometric
+                parent: opGroupData.parent
             };
             return infos;
-        },
-
-        setOpGroupInfos: function (opGroupId, infos) {
-            var rect = this.data.opGroups[opGroupId].internal.els.rect;
-            rect.setAttribute("x", infos.geometric.rect_x);
-            rect.setAttribute("y", infos.geometric.rect_y);
-            rect.setAttribute("width", infos.geometric.rect_width);
-            rect.setAttribute("height", infos.geometric.rect_height);
-
-            this.data.opGroups[opGroupId].title = infos.title;
-            this.data.opGroups[opGroupId].parent = infos.parent;
-            this.data.opGroups[opGroupId].geometric = infos.geometric;
-            this.callbackEvent('afterChange', ['opGroup_change_geometric']);
         },
 
         _connectorClicked: function (operator, connector, subConnector, connectorCategory) {
@@ -1133,7 +1834,9 @@ jQuery(function ($) {
                     fromSubConnector: this.lastOutputConnectorClicked.subConnector,
                     toOperator: operator,
                     toConnector: connector,
-                    toSubConnector: subConnector
+                    toSubConnector: subConnector,
+                    constraint0: "0",
+                    constraint1: "0"
                 };
 
                 this.addLink(linkData);
@@ -1323,11 +2026,100 @@ jQuery(function ($) {
             this.colorizeLink(linkId, this.options.defaultSelectedLinkColor);
         },
 
-        deleteOperator: function (operatorId) {
-            this._deleteOperator(operatorId, false);
+        deleteOpGroup: function (opGroupId) {
+            this._deleteOpGroup(opGroupId);
         },
 
-        _deleteOperator: function (operatorId, replace) {
+        _deleteOpGroup: function (opGroupId) {
+            if (this.selectedOpGroupId == opGroupId) {
+                this.unselectOpGroup();
+            }
+            if (!this.callbackEvent('opGroupDelete', [opGroupId])) {
+                return false;
+            }
+
+            var opGrData = this.data.opGroups[opGroupId];
+            var parentOpGr = this.data.opGroups[opGrData.parent]; 
+            //move operators to parent 
+            for (var i = 0; i < opGrData.childNode.length; i++) {
+                var childOpId = opGrData.childNode[i];
+                var childOpData = this.data.operators[childOpId];
+                if (childOpData.opGroup != childOpId) {//do not move entry node
+                    childOpData.opGroup = parentOpGr.title;
+                    parentOpGr.childNode.push(childOpId);
+                    console.log("Move " + childOpId + " to " + childOpData.opGroup);
+                }
+            }
+            //move opGroup to parent
+            for (var i = 0; i < opGrData.childGroup.length; i++) {
+                var childOpGrId = opGrData.childGroup[i];
+                var childOpGrData = this.data.opGroups[childOpGrId];
+                childOpGrData.parent = parentOpGr.title;
+                parentOpGr.childGroup.push(childOpGrId);
+                console.log("Move " + childOpGrId + " to " + childOpGrData.parent);
+            }
+
+            this.removeOpGroupFromParentList(opGroupId);
+            opGrData.internal.els.rect.remove();
+            delete this.data.opGroups[opGroupId];
+            this.callbackEvent('afterChange', ['opGroup_delete']);
+        },
+
+        deleteOperator: function (operatorId) {
+            if (operatorId == "ROOT" || operatorId == "ROOT_0") {
+                alert("ROOT cannot be deleted!");
+                return;
+            }
+
+            if (operatorId.startsWith("Op_")) {
+                if (confirm("Do you want to delete node " + operatorId + "?")) {
+                    this._deleteOperator(operatorId);
+                }
+            } else {
+                var opData = this.data.operators[operatorId];
+                if (opData.opGroup == operatorId) {
+                    this._deleteOpGroup(operatorId);//delete subgroup_x
+                    this._deleteOperator(operatorId);//delete entry node 
+                } else {
+                    if (typeof this.data.opGroups[operatorId + "_1"] != 'undefined') {
+                        this._deleteOpGroup(operatorId + "_1");//delete subgroup_1
+                        this._deleteOperator(operatorId + "_1");//delete entry node 
+                    }
+                    if (typeof this.data.opGroups[operatorId + "_0"] != 'undefined') {
+                        this._deleteOpGroup(operatorId + "_0");//delete subgroup_0
+                        this._deleteOperator(operatorId + "_0");//delete entry node 
+                    }
+                    this._deleteOperator(operatorId);//delete headnode
+                }
+            }
+        },
+
+        _deleteOperator: function (operatorId) {
+            if (!this.callbackEvent('operatorDelete', [operatorId])) {
+                return false;
+            }
+
+            for (var linkId in this.data.links) {
+                if (this.data.links.hasOwnProperty(linkId)) {
+                    var currentLink = this.data.links[linkId];
+                    if (currentLink.fromOperator == operatorId || currentLink.toOperator == operatorId) {
+                        this._deleteLink(linkId, true);
+                    }
+                }
+            }
+
+            if (operatorId == this.selectedOperatorId) {
+                this.unselectOperator();
+            }
+            
+            this.removeOperatorFromParentList(operatorId);
+            this.data.operators[operatorId].internal.els.operator.remove();
+            delete this.data.operators[operatorId];
+
+            this.callbackEvent('afterChange', ['operator_delete']);
+        },
+
+        _deleteOperator_unused: function (operatorId, replace) {
             if (!this.callbackEvent('operatorDelete', [operatorId, replace])) {
                 return false;
             }
@@ -1348,32 +2140,6 @@ jQuery(function ($) {
             delete this.data.operators[operatorId];
 
             this.callbackEvent('afterChange', ['operator_delete']);
-        },
-
-        deleteOpGroup: function (opGroupId) {
-            this._deleteOpGroup(opGroupId, false);
-        },
-
-        _deleteOpGroup: function (opGroupId, forced) {
-            if (this.selectedOpGroupId == opGroupId) {
-                this.unselectOpGroup();
-            }
-            if (!this.callbackEvent('opGroupDelete', [opGroupId, forced])) {
-                if (!forced) {
-                    return;
-                }
-            }
-
-            this.colorizeOpGroup(opGroupId, 'transparent');
-            var opGroupData = this.data.opGroups[opGroupId];
-            var rect = opGroupData.internal.els.rect;
-            if (rect.remove) {
-                rect.remove();
-            } else {
-                rect.parentNode.removeChild(rect);
-            }
-            delete this.data.opGroups[opGroupId];
-            this.callbackEvent('afterChange', ['opGroup_delete']);
         },
 
         deleteLink: function (linkId) {
@@ -1449,13 +2215,42 @@ jQuery(function ($) {
             if (this.selectedOperatorId != null) {
                 this.deleteOperator(this.selectedOperatorId);
             }
+            /*
             if (this.selectedOpGroupId != null) {
                 this.deleteOpGroup(this.selectedOpGroupId);
+            }
+            */
+        },
+
+        removeOperatorFromParentList: function (operatorId) {
+            var opData = this.data.operators[operatorId];
+            var parentOpGr = this.data.opGroups[opData.opGroup];
+            if (typeof parentOpGr == 'undefined') {
+                return;
+            }
+            for (var i = 0; i < parentOpGr.childNode.length; i++) {
+                if (parentOpGr.childNode[i] == operatorId) {
+                    parentOpGr.childNode.splice(i, 1);
+                }
+            }
+        },
+
+        removeOpGroupFromParentList: function (opGroupId) {
+            var opGrData = this.data.opGroups[opGroupId];
+            var parentOpGr = this.data.opGroups[opGrData.parent];
+            if (typeof parentOpGr == 'undefined') {
+                return;
+            }
+            for (i = 0; i < parentOpGr.childGroup.length; i++) {
+                if (parentOpGr.childGroup[i] == opGroupId) {
+                    parentOpGr.childGroup.splice(i, 1);
+                }
             }
         },
 
         setPositionRatio: function (positionRatio) {
             this.positionRatio = positionRatio;
+            console.log(this.positionRatio);
         },
 
         getPositionRatio: function () {
@@ -1463,21 +2258,29 @@ jQuery(function ($) {
         },
 
         getData: function () {
-            var keys = ['operators', 'links'];
+            var keys = ['operators', 'links', 'opGroups'];
+            var specialOp = ['headNode', 'entry'];
             var data = {};
             data.operators = $.extend(true, {}, this.data.operators);
             data.links = $.extend(true, {}, this.data.links);
-            for (var keyI in keys) {
+            data.opGroups = $.extend(true, {}, this.data.opGroups);
+            for (var keyI in keys) {//ketI  = 0
                 if (keys.hasOwnProperty(keyI)) {
-                    var key = keys[keyI];
-                    for (var objId in data[key]) {
+                    var key = keys[keyI];//key = operators 
+                    for (var objId in data[key]) { // opId in this.data.operators
                         if (data[key].hasOwnProperty(objId)) {
-                            delete data[key][objId].internal;
+                            delete data[key][objId].internal; // this.data.operators[opId].internal
+                            for (var keyJ in specialOp) {
+                                var val = specialOp[keyJ];
+                                if (data[key][objId].hasOwnProperty(val)) {
+                                    delete data[key][objId][val].internal;
+                                }
+                            }
                         }
                     }
                 }
             }
-            data.operatorTypes = this.data.operatorTypes;
+            //data.operatorTypes = this.data.operatorTypes;
             return data;
         },
 
@@ -1485,7 +2288,7 @@ jQuery(function ($) {
             return this.data;
         },
 
-        setOperatorTitle: function (operatorId, title) {
+        setOperatorTitle_unused: function (operatorId, title) {
             this.data.operators[operatorId].internal.els.title.html(title);
             if (typeof this.data.operators[operatorId].properties == 'undefined') {
                 this.data.operators[operatorId].properties = {};
@@ -1505,15 +2308,15 @@ jQuery(function ($) {
             this.callbackEvent('afterChange', ['operator_body_change']);
         },
 
-        getOperatorTitle: function (operatorId) {
-            return this.data.operators[operatorId].internal.properties.title;
+        getOperatorInfos: function (operatorId) {
+            return [this.data.operators[operatorId].internal.properties.title, this.data.operators[operatorId].opGroup];
         },
 
         getOperatorBody: function (operatorId) {
             return this.data.operators[operatorId].internal.properties.body;
         },
 
-        setOperatorData: function (operatorId, operatorData) {
+        setOperatorData_unused: function (operatorId, operatorData) {
             var infos = this.getOperatorCompleteData(operatorData);
             for (var linkId in this.data.links) {
                 if (this.data.links.hasOwnProperty(linkId)) {

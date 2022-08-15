@@ -28,8 +28,14 @@
 }
 
 .flowchart-opGroup {
+    position: absolute;
     border: 1px solid;
-    pointer-events:auto;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.flowchart-opGroup-checked {
+    pointer-events: all;
 }
 
 .flowchart-operator-connector {
@@ -110,10 +116,11 @@
 
 .flowchart-operator {
     position: absolute;
-    width: 140px;
+    width: 100px;
     border: 1px solid #CCCCCC;
     background: #FAFAFA;
     pointer-events: auto;
+    z-index: 1;
 }
 
 .flowchart-operator.hover {
@@ -124,7 +131,9 @@
     border-color: #555;
 }
 
-
+.flowchart-operator.noGroup {
+    border-color: red;
+}
 
 .flowchart-operator .flowchart-operator-title {
     width: 100%;
@@ -214,4 +223,84 @@
 .flowchart-operator-body {
     padding: 5px;
     cursor: move;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 24px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 17px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(17px);
+  -ms-transform: translateX(17px);
+  transform: translateX(17px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 24px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/*
+ * flowchart-opGroup
+ */
+.flowchart-opGroup.noGroup {
+    border-color: red;
+}
+
+.flowchart-opGroup-toggleButton {
+    margin-top: 5px;
+    margin-right: 5px;
+    pointer-events: auto;
+}
+
+.flowchart-opGroup-dragHandleBar {
+    margin-top: 5px;
+    margin-right: 5px;
+    pointer-events: auto;
+    background-color: #31D2F2;
 }
