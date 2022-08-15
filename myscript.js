@@ -1,5 +1,5 @@
 /*
-This is version 0.0.4
+This is version 0.0.3
 */
 $(document).ready(function () {
     var $flowchart = $('#flowchartworkspace');
