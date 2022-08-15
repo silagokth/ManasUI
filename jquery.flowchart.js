@@ -23,17 +23,27 @@ jQuery(function ($) {
 			// RGT
             linksLayerClass: 'flowchart-links-layer',
             operatorsLayerClass: 'flowchart-operators-layer',
+            opGroupsLayerClass: 'flowchart-opGroups-layer',
+
 			readOnly: false,
 			// ---------------------------------------------------
 
-            defaultLinkColor: '#3366ff',
-            defaultSelectedLinkColor: 'black',
+			defaultLinkColor: 'black',
+            defaultSelectedLinkColor: '#3366ff',
+            defaultOpGroupColor: 'black',
+            defaultSelectedOpGroupColor: '#3366ff',
             linkWidth: 10,
             grid: 20,
             multipleLinksOnOutput: false,
             multipleLinksOnInput: false,
             linkVerticalDecal: 0,
             verticalConnection: false,
+            onOperatorCreate: function (operatorId, operatorData, fullElement) {
+                return true;
+            },
+            onOperatorDelete: function (operatorId) {
+                return true;
+            },
             onOperatorSelect: function (operatorId) {
                 return true;
             },
@@ -46,26 +56,32 @@ jQuery(function ($) {
             onOperatorMouseOut: function (operatorId) {
                 return true;
             },
+            onOperatorMoved: function (operatorId, position) {
+
+            },
+            onLinkCreate: function (linkId, linkData) {
+                return true;
+            },
+            onLinkDelete: function (linkId, forced) {
+                return true;
+            },
             onLinkSelect: function (linkId) {
                 return true;
             },
             onLinkUnselect: function () {
                 return true;
             },
-            onOperatorCreate: function (operatorId, operatorData, fullElement) {
+            onOpGroupCreate: function (opGroupId, opGroupData) {
                 return true;
             },
-            onLinkCreate: function (linkId, linkData) {
+            onOpGroupDelete: function (opGroupId, forced) {
                 return true;
             },
-            onOperatorDelete: function (operatorId) {
+            onOpGroupSelect: function (opGroupId) {
                 return true;
             },
-            onLinkDelete: function (linkId, forced) {
+            onOpGroupUnselect: function () {
                 return true;
-            },
-            onOperatorMoved: function (operatorId, position) {
-
             },
             onAfterChange: function (changeType) {
 
@@ -80,6 +96,7 @@ jQuery(function ($) {
         lastOutputConnectorClicked: null,
         selectedOperatorId: null,
         selectedLinkId: null,
+        selectedOpGroupId: null,
         positionRatio: 1,
         globalId: null,
 		
@@ -107,29 +124,25 @@ jQuery(function ($) {
 			this.canvas = this.element;
 
             this.objs.layers.links = $('<svg id="linksLayer" class="flowchart-links-layer"></svg>');
-
 			// ---------------------------------------------------
 			// RGT
 			this.objs.layers.links.addClass(this.options.linksLayerClass);
 			// ---------------------------------------------------
-
 			this.objs.layers.links.appendTo(this.element);
-            this.objs.layers.operators = $('<div id="operatorsLayer" class="flowchart-operators-layer unselectable"></div>');
 
+            this.objs.layers.operators = $('<div id="operatorsLayer" class="flowchart-operators-layer unselectable"></div>');
 			// ---------------------------------------------------
 			// RGT
 			this.objs.layers.operators.addClass(this.options.operatorsLayerClass);
 			// ---------------------------------------------------
-
             this.objs.layers.operators.appendTo(this.element);
 
             this.objs.layers.temporaryLink = $('<svg class="flowchart-temporary-link-layer"></svg>');
-            this.objs.layers.temporaryLink.appendTo(this.element);
-
 			// ---------------------------------------------------
 			// RGT
 			this.objs.layers.temporaryLink.addClass(this.options.linksLayerClass);
-			// ---------------------------------------------------
+            // ---------------------------------------------------
+			this.objs.layers.temporaryLink.appendTo(this.element);
 
             var shape = document.createElementNS("http://www.w3.org/2000/svg", "line");
             shape.setAttribute("x1", "0");
@@ -143,6 +156,11 @@ jQuery(function ($) {
             this.objs.layers.temporaryLink[0].appendChild(shape);
             this.objs.temporaryLink = shape;
 
+            //this.objs.layers.opGroups = $('<svg id="opGroupsLayer" class="flowchart-opGroups-layer"></svg>');
+            this.objs.layers.opGroups = $('<div id="opGroupsLayer" class="flowchart-opGroups-layer unselectable"></div>');
+            this.objs.layers.opGroups.addClass(this.options.opGroupsLayerClass);
+            this.objs.layers.opGroups.appendTo(this.element);
+
             this._initEvents();
 
             if (typeof this.options.data != 'undefined') {
@@ -153,13 +171,15 @@ jQuery(function ($) {
         _initVariables: function () {
             this.data = {
                 operators: {},
-                links: {}
+                links: {},
+                opGroups: {}
             };
             this.objs = {
                 layers: {
                     operators: null,
                     temporaryLink: null,
-                    links: null
+                    links: null,
+                    opGroups: null
                 },
                 linksContext: null,
                 temporaryLink: null
@@ -182,7 +202,6 @@ jQuery(function ($) {
                 self._click((e.pageX - offset.left) / self.positionRatio, (e.pageY - offset.top) / self.positionRatio, e);
             });
 
-
 			// RGT
             this.element.on('scroll', function (e) {
                 self.redrawLinksLayer();
@@ -190,6 +209,7 @@ jQuery(function ($) {
 			// ---------------------------------------------------
 
             this.objs.layers.operators.on('pointerdown mousedown touchstart', '.flowchart-operator', function (e) {
+                console.log("pointerdown");
                e.stopImmediatePropagation();
             });
 
@@ -206,6 +226,14 @@ jQuery(function ($) {
                 }
             });
 
+            this.objs.layers.operators.on('mouseover', '.flowchart-operator', function (e) {
+                self._operatorMouseOver($(this).data('operator_id'));
+            });
+
+            this.objs.layers.operators.on('mouseout', '.flowchart-operator', function (e) {
+                self._operatorMouseOut($(this).data('operator_id'));
+            });
+
             this.objs.layers.links.on('mousedown touchstart', '.flowchart-link', function (e) {
                 e.stopImmediatePropagation();
             });
@@ -218,17 +246,43 @@ jQuery(function ($) {
                 self._connecterMouseOut($(this).data('link_id'));
             });
 
-            this.objs.layers.links.on('click', '.flowchart-link', function () {
+			this.objs.layers.links.on('click', '.flowchart-link', function () {
                 self.selectLink($(this).data('link_id'));
             });
 
-            this.objs.layers.operators.on('mouseover', '.flowchart-operator', function (e) {
-                self._operatorMouseOver($(this).data('operator_id'));
+			this.objs.layers.opGroups.on('pointerdown mousedown touchstart', '.flowchart-opGroup', function (e) {
+			    e.stopImmediatePropagation();
+			    self.holdOpGroup($(this).data('opGroup_id'));
+			});
+
+			this.objs.layers.opGroups.on('pointerup mouseup touchstop', '.flowchart-opGroup', function (e) {
+			    //e.stopImmediatePropagation();
+			    self.releaseOpGroup($(this).data('opGroup_id'));
+			});
+
+            this.objs.layers.opGroups.on('mouseover', '.flowchart-opGroup', function () {
+                self._opGroupBorderMouseOver($(this).data('opGroup_id'));
             });
 
-            this.objs.layers.operators.on('mouseout', '.flowchart-operator', function (e) {
-                self._operatorMouseOut($(this).data('operator_id'));
+            this.objs.layers.opGroups.on('mouseout', '.flowchart-opGroup', function () {
+                self._opGroupBorderMouseOut($(this).data('opGroup_id'));
             });
+
+            this.objs.layers.opGroups.on('click', '.flowchart-opGroup', function () {
+                self.selectOpGroup($(this).data('opGroup_id'));
+            });
+
+        },
+
+        holdOpGroup: function (opGroupId) {
+            var opGroupData = this.data.opGroups[opGroupId];
+            console.log("holdOpGroup");
+            //console.log(opGroupData);
+            var rect = opGroupData.internal.els.rect;
+        },
+
+        releaseOpGroup: function(opGroupId){
+            console.log("releaseOpGroup " + opGroupId);
 
         },
 
@@ -574,7 +628,7 @@ jQuery(function ($) {
             }
             this._refreshInternalProperties(operatorData);
             var infos = $.extend(true, {}, operatorData.internal.properties);
-
+            //console.log(infos);
             for (var connectorId_i in infos.inputs) {
                 if (infos.inputs.hasOwnProperty(connectorId_i)) {
                     if (infos.inputs[connectorId_i] == null) {
@@ -590,10 +644,10 @@ jQuery(function ($) {
                     }
                 }
             }
-
             if (typeof infos.class == 'undefined') {
                 infos.class = this.options.defaultOperatorClass;
             }
+            //console.log(infos);
             return infos;
         },
 
@@ -675,7 +729,7 @@ jQuery(function ($) {
                     addConnector(key_o, infos.outputs[key_o], $operator_outputs, 'outputs');
                 }
             }
-
+            //console.log(fullElement);
             return fullElement;
         },
 
@@ -764,8 +818,8 @@ jQuery(function ($) {
                 var minHeight = $('#flowchartwindow').height();
                 var minWidth = $('#flowchartwindow').width();
 
-                console.log(pos);
-                console.log(currentHight, currentWidth);
+                //console.log(pos);
+                //console.log(currentHight, currentWidth);
 
                 operatorData.top = pos.top;
                 operatorData.left = pos.left;
@@ -929,6 +983,124 @@ jQuery(function ($) {
             this.callbackEvent('afterChange', ['operator_create']);
         },
 
+        createOpGroup: function (opGroupId, opGroupDataOriginal) {
+            var opGroupData = $.extend(true, {}, opGroupDataOriginal);
+            if (!this.callbackEvent('opGroupCreate', [opGroupId, opGroupData])) {
+                return;
+            }
+            this.data.opGroups[opGroupId] = opGroupData;
+            this._drawOpGroup(opGroupId);
+
+            this.callbackEvent('afterChange', ['opGroup_create']);
+        },
+
+        _drawOpGroup: function (opGroupId) {
+            var opGroupData = this.data.opGroups[opGroupId];
+
+            if (typeof opGroupData.internal == 'undefined') {
+                opGroupData.internal = {};
+            }
+            opGroupData.internal.els = {};
+
+            /*
+            var rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            rect.setAttribute("x", opGroupData.geometric.rect_x);
+            rect.setAttribute("y", opGroupData.geometric.rect_y);
+            rect.setAttribute("width", opGroupData.geometric.rect_width);
+            rect.setAttribute("height", opGroupData.geometric.rect_height);
+            rect.setAttribute("stroke", this.options.defaultOpGroupColor);
+            rect.setAttribute("stroke-width", "2");
+            rect.setAttribute("fill", "none");
+            rect.setAttribute('class', 'flowchart-opGroup');
+            //rect.setAttribute('data-opGroup_id', opGroupId); //This doesn't work somehow!?
+            rect.dataset.opGroup_id = opGroupId;
+            this.objs.layers.opGroups[0].appendChild(rect);
+            opGroupData.internal.els.rect = rect;
+            */
+
+            var $opGroupRect = $('<div class="flowchart-opGroup"></div>');
+            $opGroupRect.appendTo(this.objs.layers.opGroups);
+            $opGroupRect.css({
+                top: opGroupData.geometric.rect_y,
+                left: opGroupData.geometric.rect_x,
+                width: opGroupData.geometric.rect_width,
+                height: opGroupData.geometric.rect_height,
+                fill: "none"
+            });
+            $opGroupRect.data('opGroup_id', opGroupId);
+            $opGroupRect.resizable({ handles: 'n, e, s, w' });
+            $opGroupRect.draggable();
+            opGroupData.internal.els.rect = $opGroupRect;
+        },
+
+        selectOpGroup: function (opGroupId) {
+            this.unselectOpGroup();
+            if (!this.callbackEvent('opGroupSelect', [opGroupId])) {
+                return;
+            }
+            this.unselectLink();
+            this.unselectOperator();
+            this.selectedOpGroupId = opGroupId;
+            this.colorizeOpGroup(opGroupId, this.options.defaultSelectedOpGroupColor);
+        },
+
+        unselectOpGroup: function () {
+            //console.log("unselectOpGroup");
+            if (this.selectedOpGroupId != null) {
+                if (!this.callbackEvent('opGroupUnselect', [])) {
+                    return;
+                }
+                this.uncolorizeOpGroup(this.selectedOpGroupId, this.options.defaultOpGroupColor);
+                this.selectedOpGroupId = null;
+            }
+        },
+
+        colorizeOpGroup: function (opGroupId, color) {
+            //console.log("colorizeOpGroup ");
+            //console.log(this.data.opGroups);
+            var opGroupData = this.data.opGroups[opGroupId];
+            //opGroupData.internal.els.rect.setAttribute('stroke', color);
+        },
+
+        uncolorizeOpGroup: function (opGroupId, color) {
+            this.colorizeOpGroup(opGroupId, color);//FIXME
+        },
+
+        _opGroupBorderMouseOver: function (opGroupId) {
+            if (this.selectedOpGroupId != opGroupId) {
+                this.colorizeOpGroup(opGroupId, this._shadeColor(this.options.defaultSelectedOpGroupColor, -0.4));//FIXME
+            }
+        },
+
+        _opGroupBorderMouseOut: function (opGroupId) {
+            if (this.selectedOpGroupId != opGroupId) {
+                this.uncolorizeOpGroup(opGroupId, this.options.defaultOpGroupColor);
+            }
+        },
+
+        getOpGroupInfos: function (opGroupId) {
+            var opGroupData = this.data.opGroups[opGroupId];
+            var infos = {
+                title: opGroupData.title,
+                parent: opGroupData.parent,
+                geometric: opGroupData.geometric
+            };
+            return infos;
+        },
+
+        setOpGroupInfos: function (opGroupId, infos) {
+            var rect = this.data.opGroups[opGroupId].internal.els.rect;
+            rect.setAttribute("x", infos.geometric.rect_x);
+            rect.setAttribute("y", infos.geometric.rect_y);
+            rect.setAttribute("width", infos.geometric.rect_width);
+            rect.setAttribute("height", infos.geometric.rect_height);
+
+            this.data.opGroups[opGroupId].title = infos.title;
+            this.data.opGroups[opGroupId].parent = infos.parent;
+            this.data.opGroups[opGroupId].geometric = infos.geometric;
+            this.callbackEvent('afterChange', ['opGroup_change_geometric']);
+        },
+
         _connectorClicked: function (operator, connector, subConnector, connectorCategory) {
             if (connectorCategory == 'outputs') {
                 var d = new Date();
@@ -991,6 +1163,10 @@ jQuery(function ($) {
 
         _click: function (x, y, e) {
             var $target = $(e.target);
+            if ($target.closest('.flowchart-opGroup').length == 0) {
+                this.unselectOpGroup();
+            }
+
             if ($target.closest('.flowchart-operator-connector').length == 0) {
                 this._unsetTemporaryLink();
             }
@@ -1038,6 +1214,7 @@ jQuery(function ($) {
                 return;
             }
             this.unselectLink();
+            this.unselectOpGroup();
             this._removeSelectedClassOperators();
             this._addSelectedClass(operatorId);
             this.selectedOperatorId = operatorId;
@@ -1084,6 +1261,10 @@ jQuery(function ($) {
 
         getSelectedLinkId: function () {
             return this.selectedLinkId;
+        },
+
+        getSelectedOpGroupId: function () {
+            return this.selectedOpGroupId;
         },
 
         // Found here : http://stackoverflow.com/questions/5560248/programmatically-lighten-or-darken-a-hex-color-or-rgb-and-blend-colors
@@ -1137,6 +1318,7 @@ jQuery(function ($) {
                 return;
             }
             this.unselectOperator();
+            this.unselectOpGroup();
             this.selectedLinkId = linkId;
             this.colorizeLink(linkId, this.options.defaultSelectedLinkColor);
         },
@@ -1166,6 +1348,32 @@ jQuery(function ($) {
             delete this.data.operators[operatorId];
 
             this.callbackEvent('afterChange', ['operator_delete']);
+        },
+
+        deleteOpGroup: function (opGroupId) {
+            this._deleteOpGroup(opGroupId, false);
+        },
+
+        _deleteOpGroup: function (opGroupId, forced) {
+            if (this.selectedOpGroupId == opGroupId) {
+                this.unselectOpGroup();
+            }
+            if (!this.callbackEvent('opGroupDelete', [opGroupId, forced])) {
+                if (!forced) {
+                    return;
+                }
+            }
+
+            this.colorizeOpGroup(opGroupId, 'transparent');
+            var opGroupData = this.data.opGroups[opGroupId];
+            var rect = opGroupData.internal.els.rect;
+            if (rect.remove) {
+                rect.remove();
+            } else {
+                rect.parentNode.removeChild(rect);
+            }
+            delete this.data.opGroups[opGroupId];
+            this.callbackEvent('afterChange', ['opGroup_delete']);
         },
 
         deleteLink: function (linkId) {
@@ -1240,6 +1448,9 @@ jQuery(function ($) {
             }
             if (this.selectedOperatorId != null) {
                 this.deleteOperator(this.selectedOperatorId);
+            }
+            if (this.selectedOpGroupId != null) {
+                this.deleteOpGroup(this.selectedOpGroupId);
             }
         },
 

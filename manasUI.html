@@ -11,12 +11,17 @@
 
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.1/themes/base/jquery-ui.css" />
+    <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.1/jquery-ui.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.5.0.js"></script>
 
+    <!--
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.0.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+     -->
 
     <script src="https://unpkg.com/@panzoom/panzoom@4.5.0/dist/panzoom.min.js"></script>
 
@@ -64,7 +69,8 @@
                     </div>
                     <div class="flowchart-buttons-1">
                         <button class="btn btn-outline-secondary btn-sm" type="button" id="create_operator">Create operator</button>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="delete_selected" onClick="deleteSelected()">Delete selected operator / link</button>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="delete_selected">Delete selected operator / link / group</button>
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="create_opGroup">Create group</button>
                         <button class="btn btn-outline-secondary btn-sm" type="button" id="zoom_in">+</button>
                         <button class="btn btn-outline-secondary btn-sm" type="button" id="zoom_out">-</button>
                         <div class="input-group my-2 input-group-sm" id="operator_properties">
@@ -78,6 +84,41 @@
                                 <label for="link_color" class="input-group-text">Link's color: </label>
                             </div>
                             <input type="color" class="form-control" id="link_color">
+                        </div>
+                        <div id="opGroup_properties">
+                            <div class="input-group my-2 input-group-sm">
+                                <div class="input-group-prepend">
+                                    <label for="opGroup_title" class="input-group-text">Group's title: </label>
+                                </div>
+                                <input type="text" class="form-control" id="opGroup_title">
+                                <div class="input-group-prepend">
+                                    <label for="opGroup_parent" class="input-group-text">Group's parent: </label>
+                                </div>
+                                <input type="text" class="form-control" id="opGroup_parent">
+                            </div>
+                            <div class="input-group my-2 input-group-sm">
+                                <div class="input-group-prepend">
+                                    <label for="opGroup_x" class="input-group-text">Distance to left: </label>
+                                </div>
+                                <input type="text" class="form-control" id="opGroup_x">
+                                <div class="input-group-prepend">
+                                    <label for="opGroup_y" class="input-group-text">Distance to top: </label>
+                                </div>
+                                <input type="text" class="form-control" id="opGroup_y">
+                            </div>
+                            <div class="input-group my-2 input-group-sm">
+                                <div class="input-group-prepend">
+                                    <label for="opGroup_width" class="input-group-text">Width: </label>
+                                </div>
+                                <input type="text" class="form-control" id="opGroup_width">
+                                <div class="input-group-prepend">
+                                    <label for="opGroup_height" class="input-group-text">Height: </label>
+                                </div>
+                                <input type="text" class="form-control" id="opGroup_height">
+                            </div>
+                            <div class="form-row d-flex flex-row-reverse">
+                                <button class="btn btn-outline-secondary btn-sm" type="button" id="setOpGroupInfos"> OK </button>
+                            </div>
                         </div>
                     </div>
                     <div class="flowchart-buttons-2">

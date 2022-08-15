@@ -7,7 +7,7 @@
     overflow: hidden;
 }
 
-.flowchart-links-layer, .flowchart-operators-layer, .flowchart-temporary-link-layer {
+.flowchart-links-layer, .flowchart-operators-layer, .flowchart-temporary-link-layer, .flowchart-opGroups-layer {
     position: absolute;
     top: 0px;
     left: 0px;
@@ -15,7 +15,7 @@
     height: 100%;
 }
 
-.flowchart-operators-layer, .flowchart-temporary-link-layer {
+.flowchart-operators-layer, .flowchart-temporary-link-layer, .flowchart-opGroups-layer {
     pointer-events: none;
 }
 
@@ -23,8 +23,13 @@
     display: none;
 }
 
-.flowchart-link, .flowchart-operator {
+.flowchart-link, .flowchart-operator, .flowchart-opGroup {
     cursor: default;
+}
+
+.flowchart-opGroup {
+    border: 1px solid;
+    pointer-events:auto;
 }
 
 .flowchart-operator-connector {

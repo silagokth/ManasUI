@@ -4,6 +4,7 @@ This is version 0.0.3
 $(document).ready(function () {
     var $flowchart = $('#flowchartworkspace');
     var $container = $flowchart.parent();
+    $("#resizable").resizable();
 
     // Apply the plugin on a standard, empty div...
     $flowchart.flowchart({
@@ -38,6 +39,7 @@ $(document).ready(function () {
 
     //-------------------------------------------------
 
+    //for draggable element
     function getOperatorData($element) {
         var nbInputs = parseInt($element.data('nb-inputs'), 10);
         var nbOutputs = parseInt($element.data('nb-outputs'), 10);
@@ -73,8 +75,19 @@ $(document).ready(function () {
     $operatorProperties.hide();
     var $linkProperties = $('#link_properties');
     $linkProperties.hide();
+    var $opGroupProperties = $('#opGroup_properties');
+    $opGroupProperties.hide();
+
     var $operatorTitle = $('#operator_title');
     var $linkColor = $('#link_color');
+
+    var $opGroupTitle = $('#opGroup_title');
+    var $opGroupParent = $('#opGroup_parent');
+    var $opGroupX = $('#opGroup_x');
+    var $opGroupY = $('#opGroup_y');
+    var $opGroupWidth = $('#opGroup_width');
+    var $opGroupHeight = $('#opGroup_height');
+
 
     $flowchart.flowchart({
         onOperatorSelect: function (operatorId) {
@@ -94,6 +107,21 @@ $(document).ready(function () {
         onLinkUnselect: function () {
             $linkProperties.hide();
             return true;
+        },
+        onOpGroupSelect: function (opGroupId) {
+            $opGroupProperties.show();
+            var infos = $flowchart.flowchart('getOpGroupInfos', opGroupId);
+            $opGroupTitle.val(infos.title);
+            $opGroupParent.val(infos.parent);
+            $opGroupX.val(infos.geometric.rect_x);
+            $opGroupY.val(infos.geometric.rect_y);
+            $opGroupWidth.val(infos.geometric.rect_width);
+            $opGroupHeight.val(infos.geometric.rect_height);
+            return true;
+        },
+        onOpGroupUnselect: function () {
+            $opGroupProperties.hide();
+            return true;
         }
     });
 
@@ -110,6 +138,24 @@ $(document).ready(function () {
             $flowchart.flowchart('setLinkMainColor', selectedLinkId, $linkColor.val());
         }
     });
+
+    $('#setOpGroupInfos').click(function () {
+        var selectedOpGroupId = $flowchart.flowchart('getSelectedOpGroupId');
+        if (selectedOpGroupId != null) {
+            var infos = {
+                title: $opGroupTitle.val(),
+                parent: $opGroupParent.val(),
+                geometric: {
+                    rect_x: $opGroupX.val(),
+                    rect_y: $opGroupY.val(),
+                    rect_width: $opGroupWidth.val(),
+                    rect_height: $opGroupHeight.val(),
+                }
+            }
+            $flowchart.flowchart('setOpGroupInfos', selectedOpGroupId, infos);
+        }
+    });
+
     //--- end
     //--- operator and link properties
     //-----------------------------------------
@@ -136,7 +182,7 @@ $(document).ready(function () {
             top: ($flowchart.height() / 2) - 30,
             left: ($flowchart.width() / 2) - 100 + (operatorI * 10),
             properties: {
-                title: 'Operator ' + (operatorI + 3),
+                title: 'Operator ' + (operatorI + 1),
                 inputs: {
                     input_1: {
                         //label: 'Input 1',
@@ -160,6 +206,41 @@ $(document).ready(function () {
     //--- end
     //--- create operator button
     //-----------------------------------------
+
+    //--- create operator button
+    //--- start
+    var opGroupId = 0;
+    function addOpGroupToFlowchart() {
+        var opGroupData = {
+            title: 'Group ' + (opGroupId + 1),
+            parent: 'ROOT',
+            geometric:{
+                rect_x: 100 + (opGroupId * 10),
+                rect_y: 100 + (opGroupId * 10),
+                rect_width: 500,
+                rect_height: 500,
+            },
+            entry: {
+                top: 150,
+                left: 100 + (opGroupId * 10) + 50,
+                properties: {
+                    title: '0',
+                    inputs: {
+                        input_1: {
+                            label: ' ',
+                        },
+                    }
+                }
+            }
+        };
+        opGroupId++;
+        $flowchart.flowchart('createOpGroup', opGroupId, opGroupData);
+    }
+    $('#create_opGroup').click(addOpGroupToFlowchart);
+    //--- end
+    //--- create operator button
+    //-----------------------------------------
+
 
 
     //-----------------------------------------
@@ -1308,7 +1389,7 @@ $(document).ready(function () {
                         groupUnit.setParentGroup("ROOT");
                         relationManager["ROOT"].appendGroup(groupUnit.getGroupName());
                     }
-                    console.log(subgroup);
+                    console.log("[deleteGroupUnit] subgroup: " + subgroup);
                     for (let count = 0; count < subgroup.length; count++) {
                         var nodeUnit = nodeMap[subgroup[count]];
                         nodeUnit.setParent("ROOT");
@@ -1751,7 +1832,7 @@ $(document).ready(function () {
                                 },
                             }
                         }
-                    }
+                    };
                     defaultFlowchartData.operators[nodeArray[count]] = newOperator;
                     operatorNum++;
                 }

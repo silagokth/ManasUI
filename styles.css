@@ -84,13 +84,27 @@
     margin-top: 10px;
 }
 
+#operator_properties {
+    width: 50%;
+}
+
 #link_properties {
+    width: 50%;
+}
+
+#opGroup_properties {
     width: 50%;
 }
 
 #flowchart_data {
     width: 50%;
     min-height: 300px;
+}
+
+#resizable{
+    width: 100px;
+    height: 100px;
+    border: 1px solid;
 }
 /*------------code division--------------*/
 #code-division {
