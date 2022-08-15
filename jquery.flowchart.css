@@ -132,7 +132,7 @@
 }
 
 .flowchart-operator.noGroup {
-    border-color: red;
+    border: 2px solid red;
 }
 
 .flowchart-operator .flowchart-operator-title {
@@ -288,8 +288,8 @@ input:checked + .slider:before {
 /*
  * flowchart-opGroup
  */
-.flowchart-opGroup.noGroup {
-    border-color: red;
+.flowchart-opGroup .noGroup {
+    border: 2px solid red;
 }
 
 .flowchart-opGroup-toggleButton {

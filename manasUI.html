@@ -48,10 +48,11 @@
                                 Name
                             </a>
                         </li>
-                        -->
+                        
                         <li>
                             <input class="form-control-sm bg-dark mt-1" type="file" id="inputFiles" />
                         </li>
+                        -->
                     </ul>
                 </div>
             </div>
@@ -74,6 +75,7 @@
                         </div>
                     </div>
                     <div class="flowchart-buttons-1">
+                        <button class="btn btn-outline-secondary btn-sm" type="button" id="zoom_ori">100%</button>
                         <button class="btn btn-outline-secondary btn-sm" type="button" id="zoom_in">+</button>
                         <button class="btn btn-outline-secondary btn-sm" type="button" id="zoom_out">-</button>
                         <button class="btn btn-outline-secondary btn-sm" type="button" id="create_opGroup">
@@ -92,7 +94,7 @@
                             <input type="text" class="form-control" id="operator_group">
                         </div>
 
-                        <div id="link_properties">
+                        <div id="link_properties_static">
                             <div class="input-group my-2 input-group-sm">
                                 <div class="input-group-prepend">
                                     <label for="link_title" class="input-group-text">Link's title: </label>
@@ -113,6 +115,8 @@
                                 </div>
                                 <input type="text" class="form-control" id="link_to">
                             </div>
+                        </div>
+                        <div id="link_properties_advanced">
                             <div class="input-group my-2 input-group-sm">
                                 <div class="input-group-prepend">
                                     <label class="input-group-text">Constraint 0</label>
@@ -199,11 +203,23 @@
                         </div>
                     </div>
                     <div class="flowchart-buttons-2">
+                        <button class="btn btn-outline-secondary btn-sm" id="get_json">Get JSON</button>
                         <button class="btn btn-outline-secondary btn-sm" id="get_data">Get data</button>
                         <button class="btn btn-outline-secondary btn-sm" id="set_data">Set data</button>
                         <button class="btn btn-outline-secondary btn-sm" id="save_local">Save to local storage</button>
                         <button class="btn btn-outline-secondary btn-sm" id="load_local">Load from local storage</button>
-                        <div class="flowchart-data-container">
+                    </div>
+                    <div class="input-output-field">
+                        <div class="input-group my-2 input-group-sm">
+                            <div class="input-group-prepend">
+                                <label class="input-group-text">&nbsp;&nbsp;&nbsp;Input isa&nbsp;&nbsp;&nbsp;</label>
+                            </div>
+                            <input class="form-control-sm" type="file" id="inputFiles"/>
+                        </div>
+                        <div class="output-data-container input-group my-2 input-group-sm">
+                            <div class="input-group-prepend">
+                                <label class="input-group-text">Output data</label>
+                            </div>
                             <textarea id="flowchart_data"></textarea>
                         </div>
                     </div>

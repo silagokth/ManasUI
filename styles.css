@@ -82,7 +82,11 @@
     margin-top: 10px;
 }
 
-.flowchart-data-container {
+.input-output-field {
+    margin-top: 10px;
+}
+
+.output-data-container {
     margin-top: 10px;
 }
 
@@ -90,11 +94,11 @@
     width: 65%;
 }
 
-#link_properties {
+#link_properties_static, #link_properties_advanced {
     width: 65%;
 }
 
-#link_properties .form-check {
+#link_properties_advanced .form-check {
     margin: 4px 0px 0px 5px;
 }
 

@@ -56,7 +56,7 @@ jQuery(function ($) {
             onOperatorMouseOut: function (operatorId) {
                 return true;
             },
-            onOperatorMoved: function (operatorId, opData) {
+            onOperatorMoved: function (operatorId, opData, destOpGrId) {
                 return true;
             },
             onLinkCreate: function (linkId, linkData) {
@@ -526,6 +526,9 @@ jQuery(function ($) {
             overallGroup.appendChild(group);
 
             var shape_path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            if (!linkId.startsWith("Op_")) {
+                shape_path.setAttribute("stroke-dasharray", "4,4");
+            }
             shape_path.setAttribute("stroke-width", this.options.linkWidth.toString());
             shape_path.setAttribute("fill", "none");
             group.appendChild(shape_path);
@@ -618,8 +621,9 @@ jQuery(function ($) {
                 linkData.internal.els.rect.setAttribute("x", fromX - 1 + this.options.linkWidth / 2);
                 linkData.internal.els.text.setAttribute("x", (fromX + toX) / 2 + 10);
                 linkData.internal.els.text.setAttribute("y", (fromY + toY) / 2 + 10);
-                if (linkData.constraint0 != null && linkData.constraint1 != null)
+                if (linkData.constraint0 != null && linkData.constraint1 != null) {
                     linkData.internal.els.text.innerHTML = "[" + linkData.constraint0 + "," + linkData.constraint1 + "]";
+                }
             } else {
                 bezierFromX = (fromX + offsetFromX + distanceFromArrow);
                 bezierToX = toX + 1;
@@ -628,7 +632,9 @@ jQuery(function ($) {
                 linkData.internal.els.rect.setAttribute("x", fromX);
                 linkData.internal.els.text.setAttribute("x", (fromX + toX) / 2 + 10);
                 linkData.internal.els.text.setAttribute("y", (fromY + toY) / 2 + 10);
-                linkData.internal.els.text.innerHTML = "[x, x]";
+                if (linkData.constraint0 != null && linkData.constraint1 != null) {
+                    linkData.internal.els.text.innerHTML = "[" + linkData.constraint0 + "," + linkData.constraint1 + "]";
+                }
             }
 
             linkData.internal.els.rect.setAttribute("y", fromY - this.options.linkWidth / 2);
@@ -642,7 +648,7 @@ jQuery(function ($) {
             }
             this._refreshInternalProperties(operatorData);
             var infos = $.extend(true, {}, operatorData.internal.properties);
-            //console.log(infos);
+
             for (var connectorId_i in infos.inputs) {
                 if (infos.inputs.hasOwnProperty(connectorId_i)) {
                     if (infos.inputs[connectorId_i] == null) {
@@ -661,7 +667,6 @@ jQuery(function ($) {
             if (typeof infos.class == 'undefined') {
                 infos.class = this.options.defaultOperatorClass;
             }
-            //console.log(infos);
             return infos;
         },
 
@@ -779,7 +784,7 @@ jQuery(function ($) {
         },
 
         addOperator: function (operatorData) {
-            console.log(this.data.operators);
+            //console.log(this.data.operators);
             while (typeof this.data.operators[this.operatorNum] != 'undefined') {
                 this.operatorNum++;
             }
@@ -852,7 +857,8 @@ jQuery(function ($) {
             }
         },
 
-        createOperator: function (operatorId, operatorData) {
+        createOperator: function (operatorId, operatorDataOriginal) {
+            var operatorData = $.extend(true, {}, operatorDataOriginal);
             operatorData.internal = {};
             this._refreshInternalProperties(operatorData);
 
@@ -914,22 +920,12 @@ jQuery(function ($) {
                 operatorData.left = pos.left;
 
                 self.resizeCanvas();
-                /*
-                for (var linkId in self.data.links) {
-                    if (self.data.links.hasOwnProperty(linkId)) {
-                        var linkData = self.data.links[linkId];
-                        if (linkData.fromOperator == operator_id || linkData.toOperator == operator_id) {
-                            self._refreshLinkPositions(linkId);
-                        }
-                    }
-                }
-                */
                 self.refreshLinkPositionsByOperatorId(operator_id);
 
                 //change opGroup
                 if (!isStopped || operatorData.properties.title == "ROOT" || operatorData.properties.title == operatorData.opGroup) {
                     //do nothing before movement is stopped or ROOT node is moved or entry node is moved
-                    return;
+                    return null;
                 }
 
                 //operator or headnode is moved 
@@ -954,7 +950,7 @@ jQuery(function ($) {
 
                 if (destOpGrId != null && operatorData.opGroup == destOpGrId) {
                     //it is moved within the same group
-                    return;
+                    return null;
                 }
 
                 //remove the operator from parent group
@@ -981,7 +977,7 @@ jQuery(function ($) {
 
                 //check if destOpId is valid
                 if (destOpGrId == null) {
-                    return;
+                    return { dest: "noGroup" };
                 }
 
                 if (!operatorData.properties.title.startsWith("Op_")) {
@@ -1011,11 +1007,13 @@ jQuery(function ($) {
                     self.data.opGroups[destOpGrId].childNode.push(operator_id);
                     operatorData.internal.els.operator.removeClass("noGroup");
                 }
+
+                return { dest: destOpGrId };
             }
 
             // Small fix has been added in order to manage eventual zoom
             // http://stackoverflow.com/questions/2930092/jquery-draggable-with-zoom-problem
-            if (this.options.canUserMoveOperators) {
+            if (this.options.canUserMoveOperators && operatorData.properties.title != operatorData.opGroup) {
                 
                 fullElement.operator.draggable({
                     containment: operatorData.internal.properties.uncontained ? false : this.element,
@@ -1120,12 +1118,20 @@ jQuery(function ($) {
                     stop: function (e, ui) {
                         self._unsetTemporaryLink();
                         var operatorId = $(this).data('operator_id');
-                        operatorChangedPosition(operatorId, ui.position, true);
+                        var status = operatorChangedPosition(operatorId, ui.position, true);
                         fullElement.operator.css({
                             height: 'auto'
                         });
 
-                        self.callbackEvent('operatorMoved', [operatorId, self.data.operators[operatorId]]);
+                        if (status != null) {
+                            var destOpGrId = status.dest;
+                            if (destOpGrId == "noGroup") {
+                                self.callbackEvent('operatorMoved', [operatorId, self.data.operators[operatorId], null]);
+                            } else {
+                                self.callbackEvent('operatorMoved', [operatorId, self.data.operators[operatorId], destOpGrId]);
+                            }
+                        }
+                        
                         self.callbackEvent('afterChange', ['operator_moved']);
                     }
                 });
@@ -1150,9 +1156,8 @@ jQuery(function ($) {
             var $opGroupRect = $('<div class="flowchart-opGroup"></div>');
             $opGroupRect.appendTo(this.objs.layers.opGroups);
             if (opGroupId.slice(-1) == 0 && !opGroupId.startsWith("ROOT")) {
-                console.log("New opGroup: " + opGroupId);//LOOP1_0
+                //console.log("New opGroup: " + opGroupId);//LOOP1_0
                 //place group into parentSubgroup
-
                 var parentOpGroup = this.data.opGroups[opGroupData.parent];
                 parentOpGroup.childGroup.push(opGroupId);
                 var parentOpGroupWidth = parseInt(parentOpGroup.internal.els.rect.css('width'));
@@ -1200,16 +1205,6 @@ jQuery(function ($) {
                     }
 
                     //console.log(opId + "is pushed right or(and) down!");
-                    /*
-                    for (var linkId in self.data.links) {
-                        if (self.data.links.hasOwnProperty(linkId)) {
-                            var linkData = self.data.links[linkId];
-                            if (linkData.fromOperator == opId || linkData.toOperator == opId) {
-                                self._refreshLinkPositions(linkId);
-                            }
-                        }
-                    }
-                    */
                     self.refreshLinkPositionsByOperatorId(opId);
                 }
 
@@ -1260,16 +1255,7 @@ jQuery(function ($) {
                     if (opData.left > opGroupData.geometric.rect_x) {
                         opData.left = opData.left + opGroupData.geometric.rect_width + 10;
                         opData.internal.els.operator.css({ left: opData.left });
-                        /*
-                        for (var linkId in self.data.links) {
-                            if (self.data.links.hasOwnProperty(linkId)) {
-                                var linkData = self.data.links[linkId];
-                                if (linkData.fromOperator == opId || linkData.toOperator == opId) {
-                                    self._refreshLinkPositions(linkId);
-                                }
-                            }
-                        }
-                        */
+                        
                         self.refreshLinkPositionsByOperatorId(opId);
                     }
                 }
@@ -1303,7 +1289,7 @@ jQuery(function ($) {
             var opGroupLeft = parseInt(opGroupData.internal.els.rect.css('left'));
 
             if (opGroupId.slice(-1) == 0) {
-                opGroupData.headNode.top = opGroupTop - 60;
+                opGroupData.headNode.top = opGroupTop - 100;
                 opGroupData.headNode.left = opGroupLeft;
                 this.createOperator(opGroupData.headNode.properties.title, opGroupData.headNode);
             }
@@ -1333,7 +1319,7 @@ jQuery(function ($) {
                     if (!isInfiniteFreeSpace && freeSpace == -1) {
                         if (ui.size.width > ui.originalSize.width) {
                             freeSpace = parseFloat($('.flowchart-container').css('width'));
-                            console.log("right");
+                            //console.log("right");
                             //get all element on the right
                             for (var opId in self.data.operators) {
                                 var opData = self.data.operators[opId];
@@ -1374,7 +1360,7 @@ jQuery(function ($) {
                             }
                         } else if (ui.size.height > ui.originalSize.height) {
                             freeSpace = parseFloat($('.flowchart-container').css('height'));
-                            console.log("down");
+                            //console.log("down");
                             for (var opId in self.data.operators) {
                                 var opData = self.data.operators[opId];
                                 var distance = opData.top - (ui.originalPosition.top + ui.originalSize.height);
@@ -1481,16 +1467,7 @@ jQuery(function ($) {
                                         opData.internal.els.operator.css({ top: (opTopOri + distance - freeSpace + margin) });
                                     }
                                     movedOp.push(opId);
-                                    /*
-                                    for (var linkId in self.data.links) {
-                                        if (self.data.links.hasOwnProperty(linkId)) {
-                                            var linkData = self.data.links[linkId];
-                                            if (linkData.fromOperator == opId || linkData.toOperator == opId) {
-                                                self._refreshLinkPositions(linkId);
-                                            }
-                                        }
-                                    }
-                                    */
+                                    
                                     self.refreshLinkPositionsByOperatorId(opId);
                                 }
                             }
@@ -1513,15 +1490,7 @@ jQuery(function ($) {
                                 opData.internal.els.operator.css({ top: (opTopOri + distance - freeSpace + margin) });
                                 //console.log("Move " + operatorsOutsideFreeSpace[i] + " to " + opData.internal.els.operator.css('top'));
                             }
-                            /*
-                            for (var linkId in self.data.links) {
-                                if (self.data.links.hasOwnProperty(linkId)) {
-                                    var linkData = self.data.links[linkId];
-                                    if (linkData.fromOperator == operatorsOutsideFreeSpace[i] || linkData.toOperator == operatorsOutsideFreeSpace[i]) {
-                                        self._refreshLinkPositions(linkId);
-                                    }
-                                }
-                            }*/
+                            
                             self.refreshLinkPositionsByOperatorId(operatorsOutsideFreeSpace[i]);
                         }
                     }
@@ -1573,15 +1542,6 @@ jQuery(function ($) {
                             opData.top = parseInt(opData.internal.els.operator.css('top'));
                             opData.left = parseInt(opData.internal.els.operator.css('left'));
 
-                            /*
-                            for (var linkId in self.data.links) {
-                                if (self.data.links.hasOwnProperty(linkId)) {
-                                    var linkData = self.data.links[linkId];
-                                    if (linkData.fromOperator == opId || linkData.toOperator == opId) {
-                                        self._refreshLinkPositions(linkId);
-                                    }
-                                }
-                            }*/
                             self.refreshLinkPositionsByOperatorId(opId);
                         }
 
@@ -1828,6 +1788,7 @@ jQuery(function ($) {
                 this._mousemove(x, y);
             }
             if (connectorCategory == 'inputs' && this.lastOutputConnectorClicked != null) {
+                var linkId = this.lastOutputConnectorClicked.operator + "_" + operator;
                 var linkData = {
                     fromOperator: this.lastOutputConnectorClicked.operator,
                     fromConnector: this.lastOutputConnectorClicked.connector,
@@ -1838,8 +1799,9 @@ jQuery(function ($) {
                     constraint0: "0",
                     constraint1: "0"
                 };
-
-                this.addLink(linkData);
+                if (operator != "ROOT" && !(operator.startsWith("Op_") && !this.lastOutputConnectorClicked.operator.startsWith("Op_"))) {
+                    this.createLink(linkId, linkData);
+                }
                 this._unsetTemporaryLink();
             }
         },
@@ -2026,7 +1988,7 @@ jQuery(function ($) {
             this.colorizeLink(linkId, this.options.defaultSelectedLinkColor);
         },
 
-        deleteOpGroup: function (opGroupId) {
+        deleteOpGroup_unused: function (opGroupId) {
             this._deleteOpGroup(opGroupId);
         },
 
@@ -2047,7 +2009,7 @@ jQuery(function ($) {
                 if (childOpData.opGroup != childOpId) {//do not move entry node
                     childOpData.opGroup = parentOpGr.title;
                     parentOpGr.childNode.push(childOpId);
-                    console.log("Move " + childOpId + " to " + childOpData.opGroup);
+                    //console.log("Move " + childOpId + " to " + childOpData.opGroup);
                 }
             }
             //move opGroup to parent
@@ -2056,7 +2018,7 @@ jQuery(function ($) {
                 var childOpGrData = this.data.opGroups[childOpGrId];
                 childOpGrData.parent = parentOpGr.title;
                 parentOpGr.childGroup.push(childOpGrId);
-                console.log("Move " + childOpGrId + " to " + childOpGrData.parent);
+                //console.log("Move " + childOpGrId + " to " + childOpGrData.parent);
             }
 
             this.removeOpGroupFromParentList(opGroupId);
@@ -2078,9 +2040,22 @@ jQuery(function ($) {
             } else {
                 var opData = this.data.operators[operatorId];
                 if (opData.opGroup == operatorId) {
-                    this._deleteOpGroup(operatorId);//delete subgroup_x
-                    this._deleteOperator(operatorId);//delete entry node 
-                } else {
+                    this._deleteOpGroup(operatorId);//delete only subgroup_x
+                    this._deleteOperator(operatorId);//delete entry node
+
+                    var siblingOpGrId = null;
+                    var headNodeId = operatorId.slice(0, -2);
+                    if (operatorId.slice(-1) == "0") {
+                        siblingOpGrId = headNodeId + "_1";
+                    } else {
+                        siblingOpGrId = headNodeId + "_0";
+                    }
+                    if (siblingOpGrId != null && !(siblingOpGrId in this.data.operators)) {
+                        //delete headnode if both subgroups are deleted
+                        this._deleteOperator(headNodeId);
+                    }
+
+                } else {//headNode is selected => delete both subgroups
                     if (typeof this.data.opGroups[operatorId + "_1"] != 'undefined') {
                         this._deleteOpGroup(operatorId + "_1");//delete subgroup_1
                         this._deleteOperator(operatorId + "_1");//delete entry node 
@@ -2095,6 +2070,9 @@ jQuery(function ($) {
         },
 
         _deleteOperator: function (operatorId) {
+            if (!(operatorId in this.data.operators)) {
+                return;
+            }
             if (!this.callbackEvent('operatorDelete', [operatorId])) {
                 return false;
             }
@@ -2149,6 +2127,10 @@ jQuery(function ($) {
         _deleteLink: function (linkId, forced) {
             if (this.selectedLinkId == linkId) {
                 this.unselectLink();
+            }
+            if (!forced && !linkId.startsWith("Op_")) {
+                alert("Cannot delete link " + linkId + "!");
+                return;
             }
             if (!this.callbackEvent('linkDelete', [linkId, forced])) {
                 if (!forced) {
@@ -2215,19 +2197,19 @@ jQuery(function ($) {
             if (this.selectedOperatorId != null) {
                 this.deleteOperator(this.selectedOperatorId);
             }
-            /*
-            if (this.selectedOpGroupId != null) {
-                this.deleteOpGroup(this.selectedOpGroupId);
-            }
-            */
         },
 
         removeOperatorFromParentList: function (operatorId) {
             var opData = this.data.operators[operatorId];
+            if (typeof opData == 'undefined') {
+                return;
+            }
+
             var parentOpGr = this.data.opGroups[opData.opGroup];
             if (typeof parentOpGr == 'undefined') {
                 return;
             }
+
             for (var i = 0; i < parentOpGr.childNode.length; i++) {
                 if (parentOpGr.childNode[i] == operatorId) {
                     parentOpGr.childNode.splice(i, 1);
@@ -2250,7 +2232,7 @@ jQuery(function ($) {
 
         setPositionRatio: function (positionRatio) {
             this.positionRatio = positionRatio;
-            console.log(this.positionRatio);
+            //console.log(this.positionRatio);
         },
 
         getPositionRatio: function () {

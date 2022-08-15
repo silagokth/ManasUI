@@ -1,378 +1,7 @@
 /*
-This is version 0.0.3
+This is version 0.0.4
 */
 $(document).ready(function () {
-    var $flowchart = $('#flowchartworkspace');
-    var $container = $flowchart.parent();
-    $("#resizable").resizable();
-
-    // Apply the plugin on a standard, empty div...
-    $flowchart.flowchart({
-        data: defaultFlowchartData,
-        defaultSelectedLinkColor: '#3366ff',
-        linkWidth: 2,
-        grid: 10,
-        multipleLinksOnInput: true,
-        multipleLinksOnOutput: true,
-        verticalConnection: true,
-    });
-
-    //zoom
-
-    const elem = document.getElementById('flowchartworkspace');
-    const panzoom = Panzoom(elem, {
-        maxScale: 5,
-        overflow: scroll,
-    });
-    panzoom.pan(10, 10);
-    panzoom.zoom(1, { animate: true });
-
-    $('#zoom_in').click(function () {
-        panzoom.zoomIn();
-        $flowchart.flowchart('setPositionRatio', panzoom.getScale());
-    });
-
-    $('#zoom_out').click(function () {
-        panzoom.zoomOut();
-        $flowchart.flowchart('setPositionRatio', panzoom.getScale());
-    });
-
-    //-----------------------------------------
-    //--- operator and link properties
-    //--- start
-    var $operatorProperties = $('#operator_properties');
-    $operatorProperties.hide();
-    var $linkProperties = $('#link_properties');
-    $linkProperties.hide();
-
-    var $operatorTitle = $('#operator_title');
-    var $operatorGroup = $('#operator_group');
-
-    var $linkTitle = $('#link_title');
-    var $linkColor = $('#link_color');
-    var $linkFrom = $('#link_from');
-    var $linkTo = $('#link_to');
-
-    $flowchart.flowchart({
-        onOperatorSelect: function (operatorId) {
-            $opGroupProperties.hide();
-            $operatorProperties.show();
-            var operatorInfos = $flowchart.flowchart('getOperatorInfos', operatorId);
-            $operatorTitle.val(operatorInfos[0]);
-            $operatorGroup.val(operatorInfos[1]);
-            return true;
-        },
-        onOperatorUnselect: function () {
-            $operatorProperties.hide();
-            return true;
-        },
-        onOperatorMoved: function (operatorId, opData) {
-            if (opData.properties.title == "ROOT" || opData.properties.title == opData.opGroup) {
-                return true;
-            }
-
-            if (operatorId.startsWith("Op_") && nodeMap.hasOwnProperty(operatorId)) {
-                var nodeUnit = nodeMap[operatorId];
-                var parent = nodeUnit.getParent()
-                if (parent != opData.opGroup) {
-                    relationManager[parent].deleteNode(operatorId, nodeUnit.getSubgroup());
-                    var groupUnitName_new = opData.opGroup.slice(0, -2);
-                    relationManager[groupUnitName_new].appendNode(operatorId, "subgroup" + opData.opGroup.slice(-1));
-                }
-                nodeMap[operatorId].setOperatorData(opData);//TODO: more details in setOperatorData
-            } else if (relationManager.hasOwnProperty(operatorId)){
-                var groupUnit = relationManager[operatorId];
-                var parentGroupUnit = groupUnit.getParentGroup();
-                var subGroup = groupUnit.getParentSubGroup();
-                if (parentGroupUnit != opData.opGroup.slice(0, -2) || subGroup != Number(opData.opGroup.slice(-1))) {
-                    relationManager[parentGroupUnit].deleteNode(operatorId, "childGroup" + subGroup);
-                    relationManager[opData.opGroup.slice(0, -2)].appendGroup(operatorId, "childGroup" + opData.opGroup.slice(-1));
-                    relationManager[operatorId].setParentGroup(opData.opGroup.slice(0, -2), Number(opData.opGroup.slice(-1)));
-                }
-            }
-        },
-        onOperatorDelete: function (operatorId) {
-            return true;
-        },
-        onLinkSelect: function (linkId) {
-            $opGroupProperties.hide();
-            $linkProperties.show();
-            var linkInfos = $flowchart.flowchart('getLinkInfos', linkId);
-            $linkTitle.val(linkId);
-            $linkColor.val(linkInfos[0]);
-            $linkFrom.val(linkInfos[1]);
-            $linkTo.val(linkInfos[2]);
-
-            $("#flexRadioPosINF0").attr('checked', false);
-            $("#flexRadioNegINF0").attr('checked', false);
-            $("#flexRadioNumber0").attr('checked', false);
-            $("#flexRadioPosINF1").attr('checked', false);
-            $("#flexRadioNegINF1").attr('checked', false);
-            $("#flexRadioNumber1").attr('checked', false);
-
-            
-            if (linkInfos[3] == "+INF") {
-                $("#flexRadioPosINF0").attr('checked', true);
-            } else if (linkInfos[3] == "-INF") {
-                $("#flexRadioNegINF0").attr('checked', true);
-            } else {
-                $("#flexRadioNumber0").attr('checked', true);
-                $("#ConstraintInput0").val(linkInfos[3]);
-            }
-            
-            if (linkInfos[4] == "+INF") {
-                $("#flexRadioPosINF1").attr('checked', true);
-            } else if (linkInfos[4] == "-INF") {
-                $("#flexRadioNegINF1").attr('checked', true);
-            } else {
-                $("#flexRadioNumber1").attr('checked', true);
-                $("#ConstraintInput1").val(linkInfos[4]);
-            }
-
-            return true;
-        },
-        onLinkUnselect: function () {
-            $linkProperties.hide();
-            return true;
-        },
-        onOpGroupDelete: function(opGroupId) {
-            deleteOpGroup(opGroupId);
-            return true;
-        },
-    });
-    /*
-    $operatorTitle.keyup(function () {
-        var selectedOperatorId = $flowchart.flowchart('getSelectedOperatorId');
-        if (selectedOperatorId != null) {
-            $flowchart.flowchart('setOperatorTitle', selectedOperatorId, $operatorTitle.val());
-        }
-    });
-    */
-    $linkColor.change(function () {
-        var selectedLinkId = $flowchart.flowchart('getSelectedLinkId');
-        if (selectedLinkId != null) {
-            $flowchart.flowchart('setLinkMainColor', selectedLinkId, $linkColor.val());
-        }
-    });
-
-    $('#setLinkConstraint').click(function () {
-        var linkId = $linkTitle.val();
-        if (!(linkId in dependencyManager)) {
-            alert("Unknown link: " + linkId);
-            return;
-        }
-
-        var constraintType0Radio = document.getElementsByName('flexRadioConstraint0');
-        var constraintType1Radio = document.getElementsByName('flexRadioConstraint1');
-        var constraintInput0 = document.getElementById('ConstraintInput0').value;
-        var constraintInput1 = document.getElementById('ConstraintInput1').value;
-
-        var constraintType0 = "";
-        var constraintType1 = "";
-
-        for (let i = 0; i < constraintType0Radio.length; i++) {
-            if (constraintType0Radio[i].checked) {
-                constraintType0 = constraintType0Radio[i].getAttribute("value");
-            }
-        }
-
-        for (let i = 0; i < constraintType1Radio.length; i++) {
-            if (constraintType1Radio[i].checked) {
-                constraintType1 = constraintType1Radio[i].getAttribute("value");
-            }
-        }
-
-        if (constraintType0 != "Number") {
-            constraintInput0 = constraintType0;
-        }
-
-        if (constraintType1 != "Number") {
-            constraintInput1 = constraintType1;
-        }
-
-        $flowchart.flowchart('setLinkConstraint', linkId, constraintInput0, constraintInput1);
-        dependencyManager[linkId].setConstraint(constraintInput0, constraintInput1);
-    });
-    //--- end
-    //--- operator and link properties
-    //-----------------------------------------
-
-
-    //-----------------------------------------
-    //--- opGroup properties
-    //--- start
-    var $opGroupProperties = $('#opGroup_properties');
-    $opGroupProperties.hide();
-
-    var $opGroupTitle = $('#opGroup_title');
-    var $subGroup = document.getElementById('showSubgroupOptions');
-    var $opGroupParent = document.getElementById('showParentGroupOptions');
-    var $parentSubGroup = document.getElementById('showParentSubgroupOptions');
-
-    $('#create_opGroup').click(function () {
-        if ($opGroupProperties.is(":hidden")) {
-            $opGroupProperties.show();
-            $operatorProperties.hide();
-            $linkProperties.hide();
-        } else {
-            $opGroupProperties.hide();
-        }
-    });
-
-    $('#setOpGroupInfos').click(function () {
-        var groupUnitName = $opGroupTitle.val();
-        var subGroup = $subGroup.options[$subGroup.selectedIndex].text;
-        var parentGroup = $opGroupParent.options[$opGroupParent.selectedIndex].text;
-        var parentSubGroup = $parentSubGroup.options[$parentSubGroup.selectedIndex].text;
-
-        if (groupUnitName.length < 1) {
-            alert("Please provide a valid name!");
-            return;
-        }
-
-        createOpGroup(groupUnitName, subGroup, parentGroup, parentSubGroup);
-        loadGroupUnitOptions();
-        clearOpGroupInfos();
-    });
-
-    function createOpGroup(groupUnitName, subGroup, parentGroup, parentSubGroup) {
-        var groupUnit = null;
-
-        //"Op_xxxx" is reserved for node, cannot be used as group name
-        if (groupUnitName.startsWith("Op_")) {
-            alert("Group name is not allowed to start with 'Op_'!");
-            return;
-        }
-
-        //Check if subGroup is already created. 
-        if (groupUnitName in relationManager) {
-            groupUnit = relationManager[groupUnitName];
-            if (groupUnit.isOpGroupPainted(subGroup)) {
-                alert(groupUnitName + "_" + subGroup + " exist!");
-                return;
-            }
-        } else if (groupUnitName != "ROOT" && !relationManager[parentGroup].isOpGroupPainted(parentSubGroup)) {//check if parent exists
-            alert("Invalid parent group " + parentGroup + "_" + parentSubGroup + " !");
-            return;
-        } else {//GroupX_1's parent group is set here when GroupX_0 is created
-            groupUnit = new GroupUnit(groupUnitName);
-            groupUnit.setParentGroup(parentGroup, parentSubGroup);
-            relationManager[groupUnit.getGroupName()] = groupUnit;
-            if (groupUnit.getGroupName() != "ROOT") {
-                relationManager[parentGroup].appendGroup(groupUnit.getGroupName());
-            }
-        }
-        
-        var opGroupData = groupUnit.getOpGroupData(Number(subGroup));
-        $flowchart.flowchart('createOpGroup', opGroupData.title, opGroupData);
-        opGroupData.isPainted = true;
-        groupUnit.setOpGroupData(Number(subGroup), opGroupData);
-
-        loadGroupUnitOptions();
-    }
-
-    function clearOpGroupInfos() {
-        $opGroupTitle.val('');
-        $subGroup.selectedIndex = 0;
-        $opGroupParent.selectedIndex = 0;
-        $parentSubGroup.selectedIndex = 0;
-    }
-
-    function deleteOpGroup(opGroupId) {
-        var groupUnitName = opGroupId.slice(0, -2);
-        
-        if (groupUnitName in relationManager) {
-            var groupUnit = relationManager[groupUnitName];
-            var subGroup = Number(opGroupId.slice(-1));
-            var opGroupData = groupUnit.getOpGroupData(Number(subGroup));
-            opGroupData.isPainted = false;
-        }
-    }
-
-    $flowchart.flowchart({
-        onOpGroupSelect: function (opGroupId) {
-            $opGroupProperties.show();
-            var infos = $flowchart.flowchart('getOpGroupInfos', opGroupId);
-            var parentTitle = infos.parent.slice(0, -2);
-            for (i = 0; i < $opGroupParent.length; i++) {
-                if ($opGroupParent.options[i].text == parentTitle) {
-                    $opGroupParent.selectedIndex = $opGroupParent.options[i].value;
-                    break;
-                }
-            }
-            $parentSubGroup.selectedIndex = Number(infos.parent.slice(-1));
-            $opGroupTitle.val(infos.title.slice(0, -2));
-            $subGroup.selectedIndex = Number(infos.title.slice(-1));
-            return true;
-        },
-        onOpGroupUnselect: function () {
-            $opGroupProperties.hide();
-            clearOpGroupInfos();
-            return true;
-        }
-    });
-
-    //--- end
-    //--- opGroup properties
-    //-----------------------------------------
-
-
-    //-----------------------------------------
-    //--- delete operator / link / group button
-    //--- start
-    $('#delete_selected').click(function () {
-        $flowchart.flowchart('deleteSelected');
-    });
-    //--- end
-    //--- delete operator / link / group button
-    //-----------------------------------------
-
-
-    //-----------------------------------------
-    //--- save and load
-    //--- start
-    function Flow2Text() {
-        var data = $flowchart.flowchart('getData');
-        $('#flowchart_data').val(JSON.stringify(data, null, 2));
-    }
-    $('#get_data').click(Flow2Text);
-
-    function Text2Flow() {
-        var data = JSON.parse($('#flowchart_data').val());
-        $flowchart.flowchart('setData', data);
-    }
-    $('#set_data').click(Text2Flow);
-
-    /*global localStorage*/
-    function SaveToLocalStorage() {
-        if (typeof localStorage !== 'object') {
-            alert('local storage not available');
-            return;
-        }
-        Flow2Text();
-        localStorage.setItem("stgLocalFlowChart", $('#flowchart_data').val());
-    }
-    $('#save_local').click(SaveToLocalStorage);
-
-    function LoadFromLocalStorage() {
-        if (typeof localStorage !== 'object') {
-            alert('local storage not available');
-            return;
-        }
-        var s = localStorage.getItem("stgLocalFlowChart");
-        if (s != null) {
-            $('#flowchart_data').val(s);
-            Text2Flow();
-        }
-        else {
-            alert('local storage empty');
-        }
-    }
-    $('#load_local').click(LoadFromLocalStorage);
-    //--- end
-    //--- save and load
-    //-----------------------------------------
-
     //Store the json content as an object
     var jsonSchema = {};
     //Map the value of "select" to instruction name
@@ -391,7 +20,7 @@ $(document).ready(function () {
     let cellString = "";//"r,c"
 
     //RELATION section
-    const relationObj = {};
+    //const relationObj = {};
     const phaseObj = {};//{'HALT' : num, 'REFI': num, 'DPU' : num, ...}
     //DEPENDENCY section
 
@@ -532,15 +161,47 @@ $(document).ready(function () {
     /* update the global object and instrcution options */
     function updateInstructionOptions(jsonObj) {
         jsonSchema = jsonObj;
-        clearContent();
-        initRelation();
+        refreshHomepage(true);
+    }
+
+    function refreshHomepage(newISA) {
+        clearContent(newISA);
+        clearVariables(newISA);
         initCell();
-        prepareInstructionInfo();
-        loadInstrOptions();
+        prepareCodeContentField();
+        if (newISA) {
+            prepareInstructionInfo();
+            loadInstrOptions();
+        }
+        if (Object.keys(instructionMap).length > 0) {
+            initRelation();
+        }
+    }
+
+    function clearVariables(newISA) {
+        instrID = 1;
+        textareaWl = 0;
+        updateSpanWl(textareaWl);
+        programManager = {};
+
+        if (!newISA) {
+            return;
+        }
+            
+        for (const key in instructionMap) {
+            delete instructionMap[key];
+        }
     }
 
     /* Remove current content before appending the new one */
-    function clearContent() {
+    function clearContent(newISA) {
+        document.getElementById("userInput").value = null;
+        document.getElementById("editableFields").innerHTML = "";
+
+        if (!newISA) {
+            return;
+        }
+
         var instrOptionsSelect = document.getElementById('showInstrOptions');
         var optionInstruction = document.createElement('option');
 
@@ -1000,7 +661,7 @@ $(document).ready(function () {
     function updateSpanWl(newVal) {
         var spanWl = document.getElementById("workingLine");
         textareaWl = newVal;
-        console.log("Working on line: " + textareaWl);
+        //console.log("Working on line: " + textareaWl);
         spanWl.innerText = getLineNumberString(textareaWl);
     }
 
@@ -1134,90 +795,15 @@ $(document).ready(function () {
     }
 
     /**************************************************RELATION*********************************************************/
-    /*
-     *  relationManager:{
-     *      groupUnitId:{
-     *          opGroup0:{
-     *              isPainted: false,
-     *              title: groupUnitId + "_0",
-     *              parent: null,
-     *              childGroup: null,
-     *              childNode: null,
-     *              geometric: {
-     *                  rect_x: 30,
-     *                  rect_y: 80,
-     *                  rect_width: 300,
-     *                  rect_height: 500
-     *              },
-     *              headNode: {
-                        top: 10,
-                        left: 10,
-                        opGroup: null,
-                        properties: {
-                            title: groupUnitId,
-                            outputs: {
-                                output_1: {
-                                    label: ' ',
-                                },
-                            }
-                        }
-                    },
-                    entry: {
-                        top: 10,
-                        left: 10,
-                        opGroup: groupUnitId + "_0",
-                        properties: {
-                            title: groupUnitId + "_0",
-                            inputs: {
-                                input_1: {
-                                    label: ' ',
-                                },
-                            }
-                        }
-                    }
-     *          },
-     *          opGroup1:{
-     *          
-     *          },
-     *      }
-     *  }
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     * 
-     *  nodeMap: {
-     *      nodeId: {
-     *          top: parentOpGroupData.geometric.top + 50,
-     *          left: parentOpGroupData.geometric.left + 50,
-     *          opGroup: parentOpGroupData.title,
-     *          properties: {
-     *              title: this.name,
-     *              inputs: {
-     *                  input_1: {
-     *                      label: ' ',
-     *                  },
-     *              },
-     *              outputs: {
-     *                  output_1: {
-     *                      label: ' ',
-     *                  },
-     *              }
-     *          }
-     *      }
-     *  }
-     * 
-     */
-
     var relationManager = {};
     var nodeMap = {};
 
-    function createGroupUnit(groupUnitId, parentId) {
+    //-----------------------------------------
+    //--------------GroupUnit------------------
+    //-----------------------------------------
+    function createGroupUnitData(groupUnitId, parentId) {
         var groupUnitData = {
-            opGroup0: {
+            0: {
                 isPainted: false,
                 title: groupUnitId + "_0",
                 parent: parentId,
@@ -1225,16 +811,21 @@ $(document).ready(function () {
                 childNode: [],
                 geometric: {
                     rect_x: 30,
-                    rect_y: 80,
+                    rect_y: 110,
                     rect_width: 300,
                     rect_height: 500
                 },
                 headNode: {
                     top: 10,
                     left: 10,
-                    opGroup: null,
+                    opGroup: parentId,
                     properties: {
                         title: groupUnitId,
+                        inputs: {
+                            input_1: {
+                                label: ' ',
+                            },
+                        },
                         outputs: {
                             output_1: {
                                 label: ' ',
@@ -1256,7 +847,7 @@ $(document).ready(function () {
                     }
                 }
             },
-            opGroup1: {
+            1: {
                 isPainted: false,
                 title: groupUnitId + "_1",
                 parent: parentId,
@@ -1264,16 +855,21 @@ $(document).ready(function () {
                 childNode: [],
                 geometric: {
                     rect_x: 30,
-                    rect_y: 80,
+                    rect_y: 110,
                     rect_width: 300,
                     rect_height: 500
                 },
                 headNode: {
                     top: 10,
                     left: 10,
-                    opGroup: null,
+                    opGroup: parentId,
                     properties: {
                         title: groupUnitId,
+                        inputs: {
+                            input_1: {
+                                label: ' ',
+                            },
+                        },
                         outputs: {
                             output_1: {
                                 label: ' ',
@@ -1300,29 +896,100 @@ $(document).ready(function () {
         relationManager[groupUnitId] = groupUnitData;
     }
 
-    function updateOpGroup(opGroupId, opGroupData) {
+    function updateOpGroupData(opGroupId, opGroupData) {
         var groupUnitId = opGroupId.slice(0, -2);
-        var subgroup = "opGroup" + opGroupId.slice(-1);
-        relationManager[groupUnitId][subgroup] = opGroupData;
+        relationManager[groupUnitId][opGroupId.slice(-1)] = opGroupData;
     }
 
-    function deleteOpGroup_new(opGroupId) {
+    function deleteOpGroupData(opGroupId) {
         var groupUnitId = opGroupId.slice(0, -2);
-        var subgroup = "opGroup" + opGroupId.slice(-1);
-        relationManager[groupUnitId][subgroup].isPainted = false;
+        var sub_num = opGroupId.slice(-1);
+        var opGrData = relationManager[groupUnitId][sub_num];
+        if (typeof opGrData != 'undefined') {
+            //MOVE NODE TO PARENT
+            //MOVE GROUP TO PARENT
+            var nodeArray = opGrData.childNode;
+            var groupArray = opGrData.childGroup;
+            var parentGroupUnit = opGrData.parent.slice(0, -2);
+            var parentSub_num = opGrData.parent.slice(-1);
+            var parentOpGrData = relationManager[parentGroupUnit][parentSub_num];
+            if (typeof parentOpGrData != 'undefined') {
+                var i = 0;
+                for (; i < nodeArray.length; i++) {
+                    var nodeData = nodeMap[nodeArray[i]];
+                    if (typeof nodeData != 'undefined') {
+                        nodeData.opGroup = parentOpGrData.title;
+                    }
+                }
+                parentOpGrData.childNode.push.apply(parentOpGrData.childNode, nodeArray);
+
+                for (i = 0; i < groupArray.length; i++) {
+                    var childGroupUnit = relationManager[groupArray[i]];
+                    if (typeof childGroupUnit != 'undefined') {
+                        childGroupUnit["0"].parent = parentOpGrData.title;
+                        childGroupUnit["0"].headNode.opGroup = parentOpGrData.title;
+                        childGroupUnit["1"].parent = parentOpGrData.title;
+                        childGroupUnit["1"].headNode.opGroup = parentOpGrData.title;
+                    }
+                    
+                }
+                parentOpGrData.childGroup.push.apply(parentOpGrData.childGroup, groupArray);
+            }
+        }
+
+        opGrData.isPainted = false;
 
         var removeAll = false;
-        if (opGroupId.slice(-1) == "0" && relationManager[groupUnitId].opGroup1.isPainted == false) {
+        if (sub_num == "0" && relationManager[groupUnitId]["1"].isPainted == false) {
             removeAll = true;
-        } else if(opGroupId.slice(-1) == "1" && relationManager[groupUnitId].opGroup0.isPainted == false) {
+        } else if (sub_num == "1" && relationManager[groupUnitId]["0"].isPainted == false) {
             removeAll = true;
         }
 
         if (removeAll) {
+            removeGroupUnitFromParentList(groupUnitId);
             delete relationManager[groupUnitId];
         }
     }
 
+    function removeNodeFromParentList(nodeId) {
+        var nodeData = nodeMap[nodeId];
+        if (typeof nodeData == 'undefined') {
+            return;
+        }
+
+        var parentGroupUnit = relationManager[nodeData.opGroup.slice(0, -2)];
+        if (typeof parentGroupUnit == 'undefined') {
+            alert("[removeNodeFromParentList] Failed to find parent group unit!");
+            return;
+        }
+        var parentOpGr = parentGroupUnit[nodeData.opGroup.slice(-1)];
+        for (var i = 0; i < parentOpGr.childNode.length; i++) {
+            if (parentOpGr.childNode[i] == nodeId) {
+                parentOpGr.childNode.splice(i, 1);
+            }
+        }
+    }
+
+    function removeGroupUnitFromParentList(groupUnitId) {
+        var sub_num = 0;
+        var opGr = relationManager[groupUnitId][sub_num];
+        var parentOpGr = relationManager[opGr.parent.slice(0, -2)][opGr.parent.slice(-1)];
+
+        if (typeof parentOpGr == 'undefined') {
+            alert("[removeGroupUnitFromParentList] Failed to find parent opGroup!");
+            return;
+        }
+        for (i = 0; i < parentOpGr.childGroup.length; i++) {
+            if (parentOpGr.childGroup[i] == groupUnitId) {
+                parentOpGr.childGroup.splice(i, 1);
+            }
+        }
+    }
+
+    //-----------------------------------------
+    //---------------NodeUnit------------------
+    //-----------------------------------------
     function createNode(nodeId) {
         var nodeData = {
             top: 0,
@@ -1346,304 +1013,23 @@ $(document).ready(function () {
         nodeMap[nodeId] = nodeData;
     }
 
-    function updateNodeData(nodeId, nodeData) {
-        delete nodeData.internal;
+    function updateNodeData(nodeId, opData) {
+        var nodeData = $.extend(true, {}, opData);
+        if (nodeData.hasOwnProperty("internal")) {
+            delete nodeData.internal;
+        }
         nodeMap[nodeId] = nodeData;
     }
 
-    function deleteNodeData(nodeId) {
+    function deleteNode(nodeId) {
+        var nodeData = nodeMap[nodeId];
+        if (typeof nodeData == 'undefined') {
+            return;
+        }
+
+        removeNodeFromParentList(nodeId);
         delete nodeMap[nodeId];
     }
-
-    class NodeUnit {
-        constructor(nameArg, parentArg, subgroupArg) {
-            this.name = nameArg;
-            this.parent = parentArg;
-            this.subgroup = subgroupArg;
-
-            this.operatorData = {};
-            this.initOperatorData();
-        }
-
-        setParent(parentArg) {
-            this.parent = parentArg;
-        }
-
-        setSubgroup(num) {
-            if (num == 1)
-                this.subgroup = 1;
-            else
-                this.subgroup = 0;
-        }
-
-        getName() {
-            return this.name;
-        }
-
-        getParent() {
-            return this.parent;
-        }
-
-        getSubgroup() {
-            if (this.subgroup == 0)
-                return "subgroup0";
-            else
-                return "subgroup1";
-        }
-
-        initOperatorData() {
-            var parentOpGroupData = relationManager[this.parent].getOpGroupData(this.subgroup);
-            this.operatorData = {
-                top: parentOpGroupData.geometric.top + 50,
-                left: parentOpGroupData.geometric.left + 50,
-                opGroup: parentOpGroupData.title,
-                properties: {
-                    title: this.name,
-                    uncontained: false,
-                    inputs: {
-                        input_1: {
-                            label: ' ',
-                        },
-                    },
-                    outputs: {
-                        output_1: {
-                            label: ' ',
-                        },
-                    }
-                }
-            };
-
-        }
-
-        getOperatorData() {
-            return this.operatorData;
-        }
-
-        setOperatorData(newData) {
-            this.operatorData = newData;
-        }
-
-    }
-
-    class GroupUnit {
-        constructor(nameArg) {
-            this.name = nameArg;
-            this.parentGroup = null;
-            this.parentSubGroup = 0;
-            this.childGroup0 = [];//child opGroup in opGroup0
-            this.childGroup1 = [];//child opGroup in opGroup1 
-            this.subgroup0 = [];//child node in opGroup0
-            this.subgroup1 = [];//child node in opGroup1
-
-            this.opGroupData0 = {
-                isPainted: false,
-                title: this.name + "_0",
-                parent: null,
-                childGroup: this.childGroup0,
-                childNode: this.subgroup0,
-                geometric: {
-                    rect_x: 30,
-                    rect_y: 80,
-                    rect_width: 300,
-                    rect_height: 500
-                },
-                headNode: {
-                    top: 10,
-                    left: 10,
-                    opGroup: null,
-                    properties: {
-                        title: this.name,
-                        outputs: {
-                            output_1: {
-                                label: ' ',
-                            },
-                        }
-                    }
-                },
-                entry: {
-                    top: 10,
-                    left: 10,
-                    opGroup: this.name + "_0",
-                    properties: {
-                        title: this.name + "_0",
-                        inputs: {
-                            input_1: {
-                                label: ' ',
-                            },
-                        }
-                    }
-                }
-            };
-
-            this.opGroupData1 = {
-                isPainted: false,
-                title: this.name + "_1",
-                parent: null,
-                childGroup: this.childGroup1,
-                childNode: this.subgroup1,
-                geometric: {
-                    rect_x: 30,
-                    rect_y: 80,
-                    rect_width: 300,
-                    rect_height: 500
-                },
-                headNode: {
-                    top: 10,
-                    left: 10,
-                    opGroup: null,
-                    properties: {
-                        title: this.name,
-                        outputs: {
-                            output_1: {
-                                label: ' ',
-                            },
-                        }
-                    }
-                },
-                entry: {
-                    top: 10,
-                    left: 10,
-                    opGroup: this.name + "_1",
-                    properties: {
-                        title: this.name + "_1",
-                        inputs: {
-                            input_1: {
-                                label: ' ',
-                            },
-                        }
-                    }
-                }
-            };
-        }
-
-        getGroupName() {
-            return this.name;
-        }
-
-        setParentGroup(parent, subGroup) {
-            if (parent != null) {
-                var parentTitle = parent + "_" + subGroup;
-                this.opGroupData0.parent = parentTitle;
-                this.opGroupData0.headNode.opGroup = parentTitle;
-                this.opGroupData1.parent = parentTitle;
-                this.opGroupData1.headNode.opGroup = parentTitle;
-                this.parentGroup = parent;
-                this.parentSubGroup = subGroup;
-            } else {
-                this.opGroupData0.parent = "ROOT_0";
-                this.opGroupData0.headNode.opGroup = "ROOT_0";
-                this.opGroupData1.parent = "ROOT_0";
-                this.opGroupData1.headNode.opGroup = "ROOT_0";
-                this.parentGroup = "ROOT";
-                this.parentSubGroup = 0;
-            }
-        }
-
-        getParentGroup() {
-            return this.parentGroup;
-        }
-
-        getParentSubGroup() {
-            return this.parentSubGroup;
-        }
-
-        getChildGroup0() {
-            return this.childGroup0;
-        }
-
-        getChildGroup1() {
-            return this.childGroup1;
-        }
-
-        getSubgroup0() {
-            return this.subgroup0;
-        }
-
-        getSubgroup1() {
-            return this.subgroup1;
-        }
-
-        getSubgroup(whichGroup) {
-            if (whichGroup == "subgroup0" || whichGroup == 0) {
-                return this.subgroup0;
-            } else if (whichGroup == "subgroup1" || whichGroup == 1) {
-                return this.subgroup1;
-            }
-        }
-
-        appendGroup(groupName, whereToAdd) {
-            if (whereToAdd == "childGroup0") {
-                this.childGroup0.push(groupName);
-            } else if (whereToAdd == "childGroup1") {
-                this.childGroup1.push(groupName);
-            }
-            
-        }
-
-        appendNode(nodeName, whereToAdd) {
-            if (whereToAdd == "subgroup0") {
-                this.subgroup0.push(nodeName);
-            } else if (whereToAdd == "subgroup1") {
-                this.subgroup1.push(nodeName);
-            }
-        }
-
-        deleteNode(nodeName, whereToDelete) {
-            if (whereToDelete == "childGroup0") {
-                for (let count = 0; count < this.childGroup0.length; count++) {
-                    if (nodeName == this.childGroup0[count]) {
-                        this.childGroup0.splice(count, 1);
-                        break;
-                    }
-                }
-            } else if (whereToDelete == "childGroup1") {
-                for (let count = 0; count < this.childGroup1.length; count++) {
-                    if (nodeName == this.childGroup1[count]) {
-                        this.childGroup1.splice(count, 1);
-                        break;
-                    }
-                }
-            } else if (whereToDelete == "subgroup0") {
-                for (let count = 0; count < this.subgroup0.length; count++) {
-                    if (nodeName == this.subgroup0[count]) {
-                        this.subgroup0.splice(count, 1);
-                        break;
-                    }
-                }
-            } else if (whereToDelete == "subgroup1") {
-                for (let count = 0; count < this.subgroup1.length; count++) {
-                    if (nodeName == this.subgroup1[count]) {
-                        this.subgroup1.splice(count, 1);
-                        break;
-                    }
-                }
-            }
-        }
-
-        isOpGroupPainted(subgroupNum) {
-            if (subgroupNum == "0") {
-                return this.opGroupData0.isPainted;
-            } else if (subgroupNum == "1") {
-                return this.opGroupData1.isPainted;
-            }
-        }
-
-        setOpGroupData(subgroupNum, opGroupData) {
-            if (subgroupNum == 0) {
-                this.opGroupData0 = opGroupData;
-            } else if (subgroupNum == 1) {
-                this.opGroupData1 = opGroupData;
-            }
-        }
-
-        getOpGroupData(subgroupNum) {
-            if (subgroupNum == 0) {
-                return this.opGroupData0;
-            } else if (subgroupNum == 1) {
-                return this.opGroupData1;
-            }
-        }
-    }    
     
     function loadGroupUnitOptions() {
         var parentGroupOptionsSelect = document.getElementById('showParentGroupOptions');
@@ -1664,8 +1050,9 @@ $(document).ready(function () {
 
     function appendNodeFromNewLine(nodeArray) {
         for (let count = 0; count < nodeArray.length; count++) {
-            nodeMap[nodeArray[count]] = new NodeUnit(nodeArray[count], "ROOT", 0);
-            relationManager["ROOT"].appendNode(nodeArray[count], "subgroup0");
+            createNode(nodeArray[count]);
+            var sub_num = "0";
+            relationManager["ROOT"][sub_num].childNode.push(nodeArray[count]);
         }
 
         addOperatorToFlowchartData(nodeArray);
@@ -1674,11 +1061,7 @@ $(document).ready(function () {
 
     function deleteNodeAlongWithProgramLine(nodeArray) {
         for (let i = 0; i < nodeArray.length; i++) {
-            var nodeUnit = nodeMap[nodeArray[i]];
-            var parent = nodeUnit.getParent();
-            var subgroup = nodeUnit.getSubgroup();
-            relationManager[parent].deleteNode(nodeArray[i], subgroup);
-            delete nodeMap[nodeArray[i]];
+            deleteNode(nodeArray[i]);
         }
 
         deleteOperatorFromFlowchart(nodeArray);
@@ -1687,48 +1070,29 @@ $(document).ready(function () {
     /*************************************************DEPENDENCY********************************************************/
     var dependencyManager = {};
 
-    class ConstraintUnit {
-        constructor(startArg, endArg, val_0, val_1) {
-            this.startpoint = startArg; //fromOperator
-            this.endpoint = endArg; //toOperator
-            this.tag = this.startpoint + " -> " + this.endpoint;
-            this.name = this.startpoint + "_" + this.endpoint; //linkId
-            this.value_0 = val_0; //constraint_0
-            this.value_1 = val_1; //constraint_1
-        }
+    function createConstraintData(startArg, endArg, val_0, val_1) {
+        return {
+            fromOperator: startArg,
+            fromConnector: "output_1",
+            toOperator: endArg,
+            toConnector: "input_1",
+            constraint0: val_0,
+            constraint1: val_1,
+        };
+    }
 
-        getConstraintStr() {
-            return '"' + this.startpoint + '"' + ' -> ' + '"' + this.endpoint + '"' + ' ' + this.value_0 + ' ' + this.value_1;
-        }
+    function createConstraint(constraintId, constraintData) {
+        dependencyManager[constraintId] = constraintData;
+    }
 
-        getConstraintTag() {
-            return this.tag;
+    function updateConstraint(constraintId, constraintData) {
+        if (constraintId in dependencyManager) {
+            dependencyManager[constraintId] = constraintData;
         }
+    }
 
-        getConstraintName() {
-            return this.name;
-        }
-
-        getStartPoint() {
-            return this.startpoint;
-        }
-
-        getEndPoint() {
-            return this.endpoint;
-        }
-
-        getValue0() {
-            return this.value_0;
-        }
-
-        getValue1() {
-            return this.value_1;
-        }
-
-        setConstraint(val_0, val_1) {
-            this.value_0 = val_0;
-            this.value_1 = val_1;
-        }
+    function deleteConstraint(constraintId) {
+        delete dependencyManager[constraintId];
     }
     
     function addConstriantForInnerNode(nodeArray) {
@@ -1738,9 +1102,11 @@ $(document).ready(function () {
         var newConstraintArray = [];
 
         for (let count = 0; count < nodeArray.length - 1; count++) {
-            var newConstraint = new ConstraintUnit(nodeArray[count], nodeArray[count + 1], "0", "0");
-            dependencyManager[newConstraint.getConstraintName()] = newConstraint;
-            newConstraintArray.push(newConstraint.getConstraintName());
+            var constraintId = nodeArray[count] + "_" + nodeArray[count + 1];
+            var constraintData = createConstraintData(nodeArray[count], nodeArray[count + 1], "0", "0");
+            createConstraint(constraintId, constraintData);
+            newConstraintArray.push(constraintId);
+
         }
         addLinkToFlowchartData(newConstraintArray);
     }
@@ -1762,92 +1128,444 @@ $(document).ready(function () {
         var index = inputID.charAt(inputID.length - 1);
         var type = inputID.substring(0, inputID.length - 1);
         if (type == "flexRadioNumber") {
-            $("#ConstraintInput" + index).show();
+            $('#ConstraintInput' + index).show();
         } else {
-            $("#ConstraintInput" + index).hide();
+            $('#ConstraintInput' + index).hide();
         }
     });
     /***************************************************Canvas**********************************************************/
-    
-    var operatorNum = 1;
-    var linkNum = 1;
-    var flowchartDataFormat = {
-        operators: {
-            operator1: {
-                top: 20,
-                left: 20,
-                properties: {
-                    title: 'Operator 1',
-                    inputs: {},
-                    outputs: {
-                        output_1: {
-                            label: ' ',
-                        }
-                    }
-                }
-            },
-            operator2: {
-                top: 80,
-                left: 300,
-                properties: {
-                    title: 'Operator 2',
-                    inputs: {
-                        input_1: {
-                            label: '1',
-                        },
-                        input_2: {
-                            label: '2',
-                        },
-                        input_3: {
-                            label: '3',
-                        },
-                        input_4: {
-                            label: '4',
-                        },
-                    },
-                    outputs: {}
-                }
-            },
-        },
-        links: {
-            link_1: {
-                fromOperator: 'operator1',
-                fromConnector: 'output_1',
-                toOperator: 'operator2',
-                toConnector: 'input_2',
-            },
-        }
-    };
 
     var defaultFlowchartData = {
         operators: {},
         links: {}
     };
 
-    function addLinkToFlowchartData(constraintArray) {
-        //Todo: verify if nodes exist 
-        for (let count = 0; count < constraintArray.length; count++) {
-            var constraintUnit = dependencyManager[constraintArray[count]];
-            var newLinkId = constraintUnit.getConstraintName();
-            var newLink = {
-                fromOperator: constraintUnit.getStartPoint(),
-                fromConnector: "output_1",
-                toOperator: constraintUnit.getEndPoint(),
-                toConnector: "input_1",
-                constraint0: constraintUnit.getValue0(),
-                constraint1: constraintUnit.getValue1(),
+    var $flowchart = $('#flowchartworkspace');
+
+    // Apply the plugin on a standard, empty div...
+    $flowchart.flowchart({
+        data: defaultFlowchartData,
+        defaultSelectedLinkColor: '#3366ff',
+        linkWidth: 2,
+        grid: 10,
+        multipleLinksOnInput: true,
+        multipleLinksOnOutput: true,
+        verticalConnection: true,
+    });
+
+    //zoom
+
+    const elem = document.getElementById('flowchartworkspace');
+    const panzoom = Panzoom(elem, {
+        maxScale: 5,
+        overflow: scroll,
+    });
+    panzoom.pan(10, 10);
+    panzoom.zoom(1, { animate: true });
+
+    $('#zoom_ori').click(function () {
+        panzoom.zoom(1, { animate: true });
+        $flowchart.flowchart('setPositionRatio', panzoom.getScale());
+    });
+
+    $('#zoom_in').click(function () {
+        panzoom.zoomIn();
+        $flowchart.flowchart('setPositionRatio', panzoom.getScale());
+    });
+
+    $('#zoom_out').click(function () {
+        panzoom.zoomOut();
+        $flowchart.flowchart('setPositionRatio', panzoom.getScale());
+    });
+
+    //-----------------------------------------
+    //--- operator and link properties
+    //--- start
+    var $operatorProperties = $('#operator_properties');
+    $operatorProperties.hide();
+    var $linkPropertiesStatic = $('#link_properties_static');
+    $linkPropertiesStatic.hide();
+    var $linkPropertiesAdvanced = $('#link_properties_advanced');
+    $linkPropertiesAdvanced.hide();
+
+
+    var $operatorTitle = $('#operator_title');
+    var $operatorGroup = $('#operator_group');
+
+    var $linkTitle = $('#link_title');
+    var $linkColor = $('#link_color');
+    var $linkFrom = $('#link_from');
+    var $linkTo = $('#link_to');
+
+    $flowchart.flowchart({
+        onOperatorSelect: function (operatorId) {
+            $opGroupProperties.hide();
+            $operatorProperties.show();
+            var operatorInfos = $flowchart.flowchart('getOperatorInfos', operatorId);
+            $operatorTitle.val(operatorInfos[0]);
+            $operatorGroup.val(operatorInfos[1]);
+            return true;
+        },
+        onOperatorUnselect: function () {
+            $operatorProperties.hide();
+            return true;
+        },
+        onOperatorMoved: function (operatorId, opData, destOpGrId) {
+            if (operatorId.startsWith("Op_")) {
+                //normal node is moved
+                if (nodeMap[operatorId].opGroup != '') {
+                    removeNodeFromParentList(operatorId);
+                }
+
+                if (destOpGrId != null) {
+                    //add node to the new parent group
+                    relationManager[destOpGrId.slice(0, -2)][destOpGrId.slice(-1)].childNode.push(operatorId);
+                }
+
+                updateNodeData(operatorId, opData);
+            } else {
+                //headNode is moved
+                var groupUnitId = operatorId;
+                var sub_num = 0;
+                var newOpGroup = "";
+
+                if (relationManager[groupUnitId][sub_num].parent != '') {
+                    removeGroupUnitFromParentList(groupUnitId);
+                }
+
+                if (destOpGrId != null) {
+                    newOpGroup = destOpGrId;
+                    //add groupUnit to the new parent group
+                    relationManager[destOpGrId.slice(0, -2)][destOpGrId.slice(-1)].childGroup.push(groupUnitId);
+                }
+
+                //update headNode here since it is not stored in the nodeMap
+                var newHeadNode = $.extend(true, {}, opData);
+                if (newHeadNode.hasOwnProperty("internal")) {
+                    delete newHeadNode.internal;
+                }
+                relationManager[groupUnitId][sub_num].parent = newOpGroup;
+                relationManager[groupUnitId][sub_num].headNode = newHeadNode;
+                sub_num++;
+                relationManager[groupUnitId][sub_num].parent = newOpGroup;
+                relationManager[groupUnitId][sub_num].headNode = newHeadNode;
             }
-            $('#flowchartworkspace').flowchart('createLink', newLinkId, newLink);
-            linkNum++;
+        },
+        onOperatorDelete: function (operatorId) {
+            if (operatorId.startsWith("Op_")) {
+                deleteNode(operatorId);
+            }
+            return true;
+        },
+        onLinkCreate: function (linkId, linkData) {
+            if (linkId.startsWith("Op_") && !(linkId in dependencyManager)) {
+                var constraintData = $.extend(true, {}, linkData);
+                createConstraint(linkId, constraintData);
+            }
+            return true;
+        },
+        onLinkDelete: function (linkId, forced) {
+            if (linkId in dependencyManager) {
+                deleteConstraint(linkId);
+            }
+            return true;
+        },
+        onLinkSelect: function (linkId) {
+            $opGroupProperties.hide();
+            if (linkId.startsWith("Op_")) {
+                $linkPropertiesStatic.show();
+                $linkPropertiesAdvanced.show()
+                var linkInfos = $flowchart.flowchart('getLinkInfos', linkId);
+                $linkTitle.val(linkId);
+                $linkColor.val(linkInfos[0]);
+                $linkFrom.val(linkInfos[1]);
+                $linkTo.val(linkInfos[2]);
+
+                $('#flexRadioPosINF0').attr('checked', false);
+                $('#flexRadioNegINF0').attr('checked', false);
+                $('#flexRadioNumber0').attr('checked', false);
+                $('#flexRadioPosINF1').attr('checked', false);
+                $('#flexRadioNegINF1').attr('checked', false);
+                $('#flexRadioNumber1').attr('checked', false);
+
+
+                if (linkInfos[3] == "+INF") {
+                    $('#flexRadioPosINF0').attr('checked', true);
+                } else if (linkInfos[3] == "-INF") {
+                    $('#flexRadioNegINF0').attr('checked', true);
+                } else {
+                    $('#flexRadioNumber0').attr('checked', true);
+                    $('#ConstraintInput0').val(linkInfos[3]);
+                }
+
+                if (linkInfos[4] == "+INF") {
+                    $('#flexRadioPosINF1').attr('checked', true);
+                } else if (linkInfos[4] == "-INF") {
+                    $('#flexRadioNegINF1').attr('checked', true);
+                } else {
+                    $('#flexRadioNumber1').attr('checked', true);
+                    $('#ConstraintInput1').val(linkInfos[4]);
+                }
+            } else {
+                $linkPropertiesStatic.show();
+                var linkInfos = $flowchart.flowchart('getLinkInfos', linkId);
+                $linkTitle.val(linkId);
+                $linkColor.val(linkInfos[0]);
+                $linkFrom.val(linkInfos[1]);
+                $linkTo.val(linkInfos[2]);
+            }
+
+            return true;
+        },
+        onLinkUnselect: function () {
+            $linkPropertiesAdvanced.hide();
+            $linkPropertiesStatic.hide();
+            return true;
+        },
+        onOpGroupSelect: function (opGroupId) {
+            $opGroupProperties.show();
+            var infos = $flowchart.flowchart('getOpGroupInfos', opGroupId);
+            var parentTitle = infos.parent.slice(0, -2);
+            for (i = 0; i < $opGroupParent.length; i++) {
+                if ($opGroupParent.options[i].text == parentTitle) {
+                    $opGroupParent.selectedIndex = $opGroupParent.options[i].value;
+                    break;
+                }
+            }
+            $parentSubGroup.selectedIndex = Number(infos.parent.slice(-1));
+            $opGroupTitle.val(infos.title.slice(0, -2));
+            $subGroup.selectedIndex = Number(infos.title.slice(-1));
+            return true;
+        },
+        onOpGroupUnselect: function () {
+            $opGroupProperties.hide();
+            clearOpGroupInfos();
+            return true;
+        },
+        onOpGroupDelete: function (opGroupId) {
+            deleteOpGroupData(opGroupId);
+            return true;
+        },
+    });
+
+    /*
+    $operatorTitle.keyup(function () {
+        var selectedOperatorId = $flowchart.flowchart('getSelectedOperatorId');
+        if (selectedOperatorId != null) {
+            $flowchart.flowchart('setOperatorTitle', selectedOperatorId, $operatorTitle.val());
+        }
+    });
+    */
+
+    $linkColor.change(function () {
+        var selectedLinkId = $flowchart.flowchart('getSelectedLinkId');
+        if (selectedLinkId != null) {
+            $flowchart.flowchart('setLinkMainColor', selectedLinkId, $linkColor.val());
+        }
+    });
+
+    $('#setLinkConstraint').click(function () {
+        var linkId = $linkTitle.val();
+        if (!(linkId in dependencyManager)) {
+            alert("Unknown link: " + linkId);
+            return;
+        }
+
+        var constraintType0Radio = document.getElementsByName('flexRadioConstraint0');
+        var constraintType1Radio = document.getElementsByName('flexRadioConstraint1');
+        var constraintInput0 = document.getElementById('ConstraintInput0').value;
+        var constraintInput1 = document.getElementById('ConstraintInput1').value;
+
+        var constraintType0 = "";
+        var constraintType1 = "";
+
+        for (let i = 0; i < constraintType0Radio.length; i++) {
+            if (constraintType0Radio[i].checked) {
+                constraintType0 = constraintType0Radio[i].getAttribute("value");
+            }
+        }
+
+        for (let i = 0; i < constraintType1Radio.length; i++) {
+            if (constraintType1Radio[i].checked) {
+                constraintType1 = constraintType1Radio[i].getAttribute("value");
+            }
+        }
+
+        if (constraintType0 != "Number") {
+            constraintInput0 = constraintType0;
+        }
+
+        if (constraintType1 != "Number") {
+            constraintInput1 = constraintType1;
+        }
+
+        $flowchart.flowchart('setLinkConstraint', linkId, constraintInput0, constraintInput1);
+        var constraintData = dependencyManager[linkId];
+        constraintData.constraint0 = constraintInput0;
+        constraintData.constraint1 = constraintInput1;
+    });
+    //--- end
+    //--- operator and link properties
+    //-----------------------------------------
+
+
+    //-----------------------------------------
+    //--- opGroup properties
+    //--- start
+    var $opGroupProperties = $('#opGroup_properties');
+    $opGroupProperties.hide();
+
+    var $opGroupTitle = $('#opGroup_title');
+    var $subGroup = document.getElementById('showSubgroupOptions');
+    var $opGroupParent = document.getElementById('showParentGroupOptions');
+    var $parentSubGroup = document.getElementById('showParentSubgroupOptions');
+
+    $('#create_opGroup').click(function () {
+        if ($opGroupProperties.is(":hidden")) {
+            $opGroupProperties.show();
+            $operatorProperties.hide();
+            $linkPropertiesStatic.hide();
+            $linkPropertiesAdvanced.hide();
+        } else {
+            $opGroupProperties.hide();
+        }
+    });
+
+    $('#setOpGroupInfos').click(function () {
+        var groupUnitId = $opGroupTitle.val();
+        var sub_num = $subGroup.options[$subGroup.selectedIndex].text;
+        var parentGroup = $opGroupParent.options[$opGroupParent.selectedIndex].text;
+        var parentSub_num = $parentSubGroup.options[$parentSubGroup.selectedIndex].text;
+
+        if (groupUnitId.length < 1) {
+            alert("Please provide a valid name!");
+            return;
+        }
+
+        createOpGroup(groupUnitId, sub_num, parentGroup, parentSub_num);
+        loadGroupUnitOptions();
+        clearOpGroupInfos();
+    });
+
+    function createOpGroup(groupUnitId, sub_num, parentGroup, parentSub_num) {
+        //"Op_xxxx" is reserved for node, cannot be used as group name
+        if (groupUnitId.startsWith("Op_")) {
+            alert("Group name is not allowed to start with 'Op_'!");
+            return;
+        }
+
+        var groupUnit = null;
+
+        //Check if subGroup is already created. 
+        if (groupUnitId in relationManager) {
+            groupUnit = relationManager[groupUnitId];
+            if (groupUnit[sub_num].isPainted) {
+                alert(groupUnitId + "_" + sub_num + " exist!");
+                return;
+            }
+        } else if (groupUnitId != "ROOT" && !relationManager[parentGroup][parentSub_num].isPainted) {//check if parent exists
+            alert("Invalid parent group " + parentGroup + "_" + parentSub_num + " !");
+            return;
+        } else {//GroupX_1's parent group is set here when GroupX_0 is created
+            createGroupUnitData(groupUnitId, parentGroup + "_" + parentSub_num);
+            if (groupUnitId != "ROOT") {
+                relationManager[parentGroup][parentSub_num].childGroup.push(groupUnitId);
+            }
+        }
+
+        relationManager[groupUnitId][sub_num].isPainted = true;
+        var opGroupData = relationManager[groupUnitId][sub_num];
+        $flowchart.flowchart('createOpGroup', opGroupData.title, opGroupData);
+
+        loadGroupUnitOptions();
+    }
+
+    function clearOpGroupInfos() {
+        $opGroupTitle.val('');
+        $subGroup.selectedIndex = 0;
+        $opGroupParent.selectedIndex = 0;
+        $parentSubGroup.selectedIndex = 0;
+    }
+
+    //--- end
+    //--- opGroup properties
+    //-----------------------------------------
+
+
+    //-----------------------------------------
+    //--- delete operator / link / group button
+    //--- start
+    $('#delete_selected').click(function () {
+        $flowchart.flowchart('deleteSelected');
+    });
+    //--- end
+    //--- delete operator / link / group button
+    //-----------------------------------------
+
+
+    //-----------------------------------------
+    //--- save and load
+    //--- start
+    function generateJSON() {
+
+    }
+    $('#get_json').click(generateJSON);
+
+    function Flow2Text() {
+        var data = $flowchart.flowchart('getData');
+        $('#flowchart_data').val(JSON.stringify(data, null, 2));
+    }
+    $('#get_data').click(Flow2Text);
+
+    function Text2Flow() {
+        var data = JSON.parse($('#flowchart_data').val());
+        $flowchart.flowchart('setData', data);
+    }
+    $('#set_data').click(Text2Flow);
+
+    /*global localStorage*/
+    function SaveToLocalStorage() {
+        if (typeof localStorage !== 'object') {
+            alert('local storage not available');
+            return;
+        }
+        Flow2Text();
+        localStorage.setItem("stgLocalFlowChart", $('#flowchart_data').val());
+    }
+    $('#save_local').click(SaveToLocalStorage);
+
+    function LoadFromLocalStorage() {
+        if (typeof localStorage !== 'object') {
+            alert('local storage not available');
+            return;
+        }
+        var s = localStorage.getItem("stgLocalFlowChart");
+        if (s != null) {
+            $('#flowchart_data').val(s);
+            Text2Flow();
+        }
+        else {
+            alert('local storage empty');
+        }
+    }
+    $('#load_local').click(LoadFromLocalStorage);
+    //--- end
+    //--- save and load
+    //-----------------------------------------
+
+    function addLinkToFlowchartData(constraintArray) {
+        for (let count = 0; count < constraintArray.length; count++) {
+            var newLinkId = constraintArray[count];
+            var newLinkData = dependencyManager[newLinkId];
+            $('#flowchartworkspace').flowchart('createLink', newLinkId, newLinkData);
         }
     }
 
     function addOperatorToFlowchartData(nodeArray) {
         for (let count = 0; count < nodeArray.length; count++) {
-            var newOperator = nodeMap[nodeArray[count]].getOperatorData();
+            var newOperatorData = nodeMap[nodeArray[count]];
 
-            $('#flowchartworkspace').flowchart('createOperator', newOperator.properties.title, newOperator);
-            operatorNum++;
+            $('#flowchartworkspace').flowchart('createOperator', newOperatorData.properties.title, newOperatorData);
         }
     }
 
@@ -1856,10 +1574,6 @@ $(document).ready(function () {
         for (let count = 0; count < nodeArray.length; count++) {
             $('#flowchartworkspace').flowchart('deleteOperator', nodeArray[count]);
         }
-    }
-
-    function updateGraphData() {
-        $('#flowchartworkspace').flowchart('setData', defaultFlowchartData);
     }
     /*************************Test program. Use random number generator to select the index of instruction**************************/
     function generateRandomProgram(length) {
@@ -1883,20 +1597,13 @@ $(document).ready(function () {
     //function clearTestProgram()
     $('#buttonRunTest').dblclick(function () {
         if (confirm('Delete all program?')) {
-            instrID = 1;
-            textareaWl = 0;
-            updateSpanWl(textareaWl);
-            programManager = {}
-            initCell();
-            prepareCodeContentField();
-            initRelation();
-            document.getElementById("userInput").value = null;
-            document.getElementById("editableFields").innerHTML = "";
+            refreshHomepage(false);
         }
     });
     /************************************************End**********************************************************/
 
 });
+
 /*For testing purpose, to check if load correct json file (isa_v1.json) by displaying its content*/
 /*
 function showInstruction() {
