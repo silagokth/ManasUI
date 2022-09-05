@@ -83,15 +83,124 @@
                         </button>
                         <button class="btn btn-outline-secondary btn-sm" type="button" id="delete_selected">Delete operator / link / group</button>
 
-                        <div class="input-group my-2 input-group-sm" id="operator_properties">
-                            <div class="input-group-prepend">
-                                <label for="operator_title" class="input-group-text">Operator's title: </label>
+                        <div id="operator_properties">
+                            <div class="input-group my-2 input-group-sm">
+                                <div class="input-group-prepend">
+                                    <label for="operator_title" class="input-group-text">Operator's title: </label>
+                                </div>
+                                <input type="text" class="form-control" id="operator_title">
                             </div>
-                            <input type="text" class="form-control" id="operator_title">
-                            <div class="input-group-prepend">
-                                <label for="operator_group" class="input-group-text">Operator's group: </label>
+
+                            <div class="input-group my-2 input-group-sm">
+                                <div class="input-group-prepend">
+                                    <label for="operator_group" class="input-group-text">Operator's group: </label>
+                                </div>
+                                <input type="text" class="form-control" id="operator_group">
                             </div>
-                            <input type="text" class="form-control" id="operator_group">
+
+                            <div class="input-group my-2 input-group-sm">
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text">dont_touch: </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="flexRadioDontTouch" id="dontTouchTrue" value="True">
+                                    <label class="form-check-label" for="dontTouchTrue">
+                                        True
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="flexRadioDontTouch" id="dontTouchFalse" value="False" checked>
+                                    <label class="form-check-label" for="dontTouchFalse">
+                                        False
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="input-group my-2 input-group-sm">
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text">expand_loop: </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="flexRadioExpandLoop" id="expandLoopTrue" value="True">
+                                    <label class="form-check-label" for="expandLoopTrue">
+                                        True
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="flexRadioExpandLoop" id="expandLoopFalse" value="False" checked>
+                                    <label class="form-check-label" for="expandLoopFalse">
+                                        False
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="input-group my-2 input-group-sm">
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text">ignore_children: </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="flexRadioIgnoreChildren" id="ignoreChildrenTrue" value="True">
+                                    <label class="form-check-label" for="ignoreChildrenTrue">
+                                        True
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="flexRadioIgnoreChildren" id="ignoreChildrenFalse" value="False" checked>
+                                    <label class="form-check-label" for="ignoreChildrenFalse">
+                                        False
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="input-group my-2 input-group-sm">
+                                <div class="input-group-prepend">
+                                    <label class="input-group-text">is_bulk: </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="flexRadioIsBulk" id="isBulkTrue" value="True">
+                                    <label class="form-check-label" for="isBulkTrue">
+                                        True
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="flexRadioIsBulk" id="isBulkFalse" value="False" checked>
+                                    <label class="form-check-label" for="isBulkFalse">
+                                        False
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="input-group my-2 input-group-sm">
+                                <div class="input-group-prepend">
+                                    <label for="operator_issue_slot" class="input-group-text">issue_slot: </label>
+                                </div>
+                                <input type="text" class="form-control" id="operator_issue_slot">
+                            </div>
+
+                            <div class="input-group my-2 input-group-sm">
+                                <div class="input-group-prepend">
+                                    <label for="operator_rot" class="input-group-text">rot: </label>
+                                </div>
+                                <input type="text" class="form-control" id="operator_rot">
+                            </div>
+
+                            <div class="input-group my-2 input-group-sm">
+                                <div class="input-group-prepend">
+                                    <label for="operator_scheduled_time" class="input-group-text">scheduled_time: </label>
+                                </div>
+                                <input type="text" class="form-control" id="operator_scheduled_time">
+                            </div>
+
+                            <div class="input-group my-2 input-group-sm">
+                                <div class="input-group-prepend">
+                                    <label for="operator_shift_factor" class="input-group-text">shift_factor: </label>
+                                </div>
+                                <input type="text" class="form-control" id="operator_shift_factor">
+                            </div>
+
+                            <div class="form-row d-flex flex-row-reverse">
+                                <button class="btn btn-outline-secondary btn-sm" type="button" id="setOperatorInfos"> Apply </button>
+                            </div>
                         </div>
 
                         <div id="link_properties_static">
@@ -184,6 +293,7 @@
                                     <option value="1">1</option>
                                 </select>
                             </div>
+
                             <div class="input-group my-2 input-group-sm">
                                 <div class="input-group-prepend">
                                     <label for="opGroup_parent" class="input-group-text">Group's parent: </label>
@@ -197,6 +307,7 @@
                                     <option value="1">1</option>
                                 </select>
                             </div>
+
                             <div class="form-row d-flex flex-row-reverse">
                                 <button class="btn btn-outline-secondary btn-sm" type="button" id="setOpGroupInfos"> Apply </button>
                             </div>
@@ -218,7 +329,7 @@
                         </div>
                         <div class="output-data-container input-group my-2 input-group-sm">
                             <div class="input-group-prepend">
-                                <label class="input-group-text">Output data</label>
+                                <a class="dynamic input-group-text">Output data<br>(Download)</a>
                             </div>
                             <textarea id="flowchart_data"></textarea>
                         </div>

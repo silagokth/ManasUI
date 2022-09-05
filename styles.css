@@ -94,6 +94,10 @@
     width: 65%;
 }
 
+#operator_properties .form-check{
+    margin: 4px 5px 0px 5px;
+}
+
 #link_properties_static, #link_properties_advanced {
     width: 65%;
 }

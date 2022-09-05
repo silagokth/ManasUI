@@ -874,6 +874,11 @@ jQuery(function ($) {
             entry      "ROOT_0".opGroup: "ROOT_0"        "LOOPb_0".opGroup: "LOOPb_0"
             All headNodes and entries don't need to be relocated. 
             */
+            if (operatorData.properties.title == operatorData.opGroup) {
+                //make entry node a bit different
+                fullElement.title.addClass('flowchart-operator-entry');
+            }
+
             var parentOpGroup = this.data.opGroups[operatorData.opGroup];
 
             if (operatorData.properties.title != "ROOT") {
@@ -948,7 +953,7 @@ jQuery(function ($) {
                     }
                 }
 
-                if (destOpGrId != null && operatorData.opGroup == destOpGrId) {
+                if (destOpGrId != null && (operatorData.opGroup == destOpGrId || operator_id == destOpGrId.slice(0, -2))) {
                     //it is moved within the same group
                     return null;
                 }
@@ -1799,7 +1804,7 @@ jQuery(function ($) {
                     constraint0: "0",
                     constraint1: "0"
                 };
-                if (operator != "ROOT" && !(operator.startsWith("Op_") && !this.lastOutputConnectorClicked.operator.startsWith("Op_"))) {
+                if (!(linkId in this.data.links) && operator != "ROOT" && !(operator.startsWith("Op_") && !this.lastOutputConnectorClicked.operator.startsWith("Op_"))) {
                     this.createLink(linkId, linkData);
                 }
                 this._unsetTemporaryLink();

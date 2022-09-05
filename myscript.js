@@ -3,7 +3,7 @@ This is version 0.0.4
 */
 $(document).ready(function () {
     //Store the json content as an object
-    var jsonSchema = {};
+    var isaData = {};
     //Map the value of "select" to instruction name
     const instructionMap = {};//{1: 'HALT', 2: 'REFI', 3: 'DPU', 4: 'SWB', 5: 'JUMP', 6: 'WAIT', 7: 'LOOP', 8: 'RACCU', 9: 'BRANCH', 10: 'ROUTE', 11: 'SRAM'}
     //Hold the current selected instruction
@@ -44,6 +44,7 @@ $(document).ready(function () {
             }
             //generate full line
             this.generateFullInstructionLine();
+            this.generateFullOptionsObject();
         }
 
         setCellPosition(rowArg, colArg) {
@@ -87,6 +88,10 @@ $(document).ready(function () {
             return this.fullLine;
         }
 
+        getFullOptionsObject() {
+            return this.fullOptionsObject;
+        }
+
         getNodeArray() {
             let nodeArr = [];
             for (let count = 1; count < Number(this.phase) + 1; count++) {
@@ -96,7 +101,7 @@ $(document).ready(function () {
         }
 
         generateFullInstructionLine() {
-            var instructionList = jsonSchema.instruction_templates;
+            var instructionList = isaData.instruction_templates;
 
             for (let i in instructionList) {
                 if (instructionList[i].name == this.name) {
@@ -111,6 +116,29 @@ $(document).ready(function () {
                             this.fullLine += " " + segmentList[j].default_val;
                         } else {
                             this.fullLine += " " + 0;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        generateFullOptionsObject() {
+            var instructionList = isaData.instruction_templates;
+
+            for (let i in instructionList) {
+                if (instructionList[i].name == this.name) {
+                    var segmentList = instructionList[i].segment_templates;
+                    this.fullOptionsObject = {};
+
+                    for (let j in segmentList) {
+                        var segValue = this.segmentOptionObject[segmentList[j].name];
+                        if (typeof segValue != "undefined") {
+                            this.fullOptionsObject[segmentList[j].name] = Number(segValue);
+                        } else if (typeof segmentList[j].default_val != "undefined") {
+                            this.fullOptionsObject[segmentList[j].name] = segmentList[j].default_val;
+                        } else {
+                            this.fullOptionsObject[segmentList[j].name] = 0;
                         }
                     }
                     break;
@@ -138,29 +166,38 @@ $(document).ready(function () {
 
     /* Load the selected file -> expected "isa.json" */
     function handleFileSelect(evt) {
-        var files = evt.target.files; // FileList object
+        var file = evt.target.files[0]; // FileList object
+        var reader = new FileReader();
 
-        // Loop through the FileList
-        for (let i = 0, f; f = files[i]; i++) {
+        reader.onload = (function (theFile) {
+            return function (e) {
+                fetch(e.target.result)
+                    .then(res => res.json()) // the .json() method parses the JSON response into a JS object literal
+                    .then(data => parseInputfile(theFile.name, data));
+            }
+        })(file);
 
-            var reader = new FileReader();
+        reader.readAsDataURL(file);
+    }
 
-            reader.onload = (function (theFile) {
-                return function (e) {
+    function parseInputfile(filename, data) {
+        if (filename.startsWith("isa")) {
+            updateInstructionOptions(data);
+        } else if (filename.startsWith("descriptor")) {
+            restoreProgramFromJSON(data);
+        }
+    }
 
-                    fetch(e.target.result)
-                        .then(res => res.json()) // the .json() method parses the JSON response into a JS object literal
-                        .then(data => updateInstructionOptions(data));
-                }
-            })(f);
-
-            reader.readAsDataURL(f);
+    function restoreProgramFromJSON(manasObj) {
+        if ("isa" in manasObj) {
+            updateInstructionOptions(manasObj.isa);
         }
     }
 
     /* update the global object and instrcution options */
-    function updateInstructionOptions(jsonObj) {
-        jsonSchema = jsonObj;
+    function updateInstructionOptions(isaObj) {
+        isaData = isaObj;
+        console.log(isaData);
         refreshHomepage(true);
     }
 
@@ -214,7 +251,7 @@ $(document).ready(function () {
     }
 
     function prepareInstructionInfo() {
-        var instructionList = jsonSchema.instruction_templates;
+        var instructionList = isaData.instruction_templates;
         var insCounter = 0;
 
         for (let i in instructionList) {
@@ -281,7 +318,7 @@ $(document).ready(function () {
     }
 
     function prepareEditableFields(isNewInstruction, selectedInstr, segmentOptStr, cellPosition) {
-        var instructionList = jsonSchema.instruction_templates;
+        var instructionList = isaData.instruction_templates;
         var cellUnitField = document.getElementById("cellUnit");
         var instrInputField = document.getElementById("userInput");
         var editableFields = document.getElementById("editableFields");
@@ -582,7 +619,7 @@ $(document).ready(function () {
         if (userInputString.length > 0) {
             instrInputField.value = currentSelectedInstr + userInputString.substring(0, userInputString.length - 2);
         } else {
-            var instructionList = jsonSchema.instruction_templates;
+            var instructionList = isaData.instruction_templates;
             for (let i in instructionList) {
                 if (instructionList[i].name == currentSelectedInstr.substring(0, currentSelectedInstr.length - 1)) {
                     if (Object.keys(instructionList[i].segment_templates).length > 0) {
@@ -890,7 +927,15 @@ $(document).ready(function () {
                         }
                     }
                 }
-            }
+            },
+            dont_touch: false,
+            expand_loop: false,
+            ignore_children: false,
+            is_bulk: false,
+            issue_slot: '',
+            rot: null,
+            scheduled_time: -1,
+            shift_factor: 0
         }
 
         relationManager[groupUnitId] = groupUnitData;
@@ -1007,7 +1052,15 @@ $(document).ready(function () {
                         label: "",
                     },
                 }
-            }
+            },
+            dont_touch: false,
+            expand_loop: false,
+            ignore_children: false,
+            is_bulk: false,
+            issue_slot: '',
+            rot: null,
+            scheduled_time: -1,
+            shift_factor: 0
         };
 
         nodeMap[nodeId] = nodeData;
@@ -1178,6 +1231,7 @@ $(document).ready(function () {
         $flowchart.flowchart('setPositionRatio', panzoom.getScale());
     });
 
+
     //-----------------------------------------
     //--- operator and link properties
     //--- start
@@ -1187,7 +1241,6 @@ $(document).ready(function () {
     $linkPropertiesStatic.hide();
     var $linkPropertiesAdvanced = $('#link_properties_advanced');
     $linkPropertiesAdvanced.hide();
-
 
     var $operatorTitle = $('#operator_title');
     var $operatorGroup = $('#operator_group');
@@ -1200,10 +1253,65 @@ $(document).ready(function () {
     $flowchart.flowchart({
         onOperatorSelect: function (operatorId) {
             $opGroupProperties.hide();
+            if (!(operatorId.startsWith("Op_") || operatorId in relationManager)) {
+                $operatorProperties.hide();
+                return true;
+            }
+            
             $operatorProperties.show();
             var operatorInfos = $flowchart.flowchart('getOperatorInfos', operatorId);
             $operatorTitle.val(operatorInfos[0]);
             $operatorGroup.val(operatorInfos[1]);
+
+            var operationData = null;
+            if (operatorId.startsWith("Op_")) {
+                operationData = nodeMap[operatorId];
+            } else if (operatorId in relationManager) {
+                operationData = relationManager[operatorId];
+            }
+
+            if (operationData == null) {
+                $operatorProperties.hide();
+                return true;
+            }
+            console.log(operationData);
+            
+            if (operationData.dont_touch == true) {
+                $('#dontTouchFalse').prop('checked', false);
+                $('#dontTouchTrue').prop('checked', true);
+            } else {
+                $('#dontTouchTrue').prop('checked', false);
+                $('#dontTouchFalse').prop('checked', true);
+            }
+
+            if (operationData.expand_loop == true) {
+                $('#expandLoopFalse').prop('checked', false);
+                $('#expandLoopTrue').prop('checked', true);
+            } else {
+                $('#expandLoopTrue').prop('checked', false);
+                $('#expandLoopFalse').prop('checked', true);
+            }
+
+            if (operationData.ignore_children == true) {
+                $('#ignoreChildrenFalse').prop('checked', false);
+                $('#ignoreChildrenTrue').prop('checked', true);
+            } else {
+                $('#ignoreChildrenTrue').prop('checked', false);
+                $('#ignoreChildrenFalse').prop('checked', true);
+            }
+
+            if (operationData.is_bulk == true) {
+                $('#isBulkFalse').prop('checked', false);
+                $('#isBulkTrue').prop('checked', true);
+            } else {
+                $('#isBulkTrue').prop('checked', false);
+                $('#isBulkFalse').prop('checked', true);
+            }
+
+            $('#operator_issue_slot').val(operationData.issue_slot);
+            $('#operator_rot').val(operationData.rot);
+            $('#operator_scheduled_time').val(operationData.scheduled_time);
+            $('#operator_shift_factor').val(operationData.shift_factor);
             return true;
         },
         onOperatorUnselect: function () {
@@ -1257,6 +1365,80 @@ $(document).ready(function () {
             }
             return true;
         },
+    });
+
+    /*
+    $operatorTitle.keyup(function () {
+        var selectedOperatorId = $flowchart.flowchart('getSelectedOperatorId');
+        if (selectedOperatorId != null) {
+            $flowchart.flowchart('setOperatorTitle', selectedOperatorId, $operatorTitle.val());
+        }
+    });
+    */
+
+    $('#setOperatorInfos').click(function () {
+        var operatorId = $operatorTitle.val();
+        var operationData = null;
+        if (operatorId in relationManager) {
+            operationData = relationManager[operatorId];
+        } else if (operatorId in nodeMap) {
+            operationData = nodeMap[operatorId];
+        }
+
+        if (operationData != null) {
+            var radioName = document.getElementsByName('flexRadioDontTouch');
+            if (radioName[0].checked) {
+                operationData.dont_touch = true;
+            } else {
+                operationData.dont_touch = false;
+            }
+
+            radioName = document.getElementsByName('flexRadioExpandLoop');
+            if (radioName[0].checked) {
+                operationData.expand_loop = true;
+            } else {
+                operationData.expand_loop = false;
+            }
+
+            radioName = document.getElementsByName('flexRadioIgnoreChildren');
+            if (radioName[0].checked) {
+                operationData.ignore_children = true;
+            } else {
+                operationData.ignore_children = false;
+            }
+
+            radioName = document.getElementsByName('flexRadioIsBulk');
+            if (radioName[0].checked) {
+                operationData.is_bulk = true;
+            } else {
+                operationData.is_bulk = false;
+            }
+
+            operationData.issue_slot = $('#operator_issue_slot').val();
+            operationData.rot = $('#operator_rot').val();
+            operationData.scheduled_time = Number($('#operator_scheduled_time').val());
+            operationData.shift_factor = Number($('#operator_shift_factor').val());
+
+            console.log(typeof operationData.is_bulk);
+            console.log(typeof operationData.issue_slot);
+            console.log(typeof operationData.rot);
+            console.log(typeof operationData.scheduled_time);
+            console.log(typeof operationData.shift_factor);
+
+            alert("Operator properties are saved.");
+        }
+    });
+
+    //--- end
+    //--- operator and link properties
+    //-----------------------------------------
+
+
+
+    //-----------------------------------------
+    //--- link properties
+    //--- start
+    $flowchart.flowchart({
         onLinkCreate: function (linkId, linkData) {
             if (linkId.startsWith("Op_") && !(linkId in dependencyManager)) {
                 var constraintData = $.extend(true, {}, linkData);
@@ -1281,30 +1463,35 @@ $(document).ready(function () {
                 $linkFrom.val(linkInfos[1]);
                 $linkTo.val(linkInfos[2]);
 
-                $('#flexRadioPosINF0').attr('checked', false);
-                $('#flexRadioNegINF0').attr('checked', false);
-                $('#flexRadioNumber0').attr('checked', false);
-                $('#flexRadioPosINF1').attr('checked', false);
-                $('#flexRadioNegINF1').attr('checked', false);
-                $('#flexRadioNumber1').attr('checked', false);
-
+                $('#flexRadioPosINF0').prop('checked', false);
+                $('#flexRadioNegINF0').prop('checked', false);
+                $('#flexRadioNumber0').prop('checked', false);
+                $('#flexRadioPosINF1').prop('checked', false);
+                $('#flexRadioNegINF1').prop('checked', false);
+                $('#flexRadioNumber1').prop('checked', false);
+                $('#ConstraintInput0').val(0);
+                $('#ConstraintInput1').val(0);
+                $('#ConstraintInput0').hide();
+                $('#ConstraintInput1').hide();
 
                 if (linkInfos[3] == "+INF") {
-                    $('#flexRadioPosINF0').attr('checked', true);
+                    $('#flexRadioPosINF0').prop('checked', true);
                 } else if (linkInfos[3] == "-INF") {
-                    $('#flexRadioNegINF0').attr('checked', true);
+                    $('#flexRadioNegINF0').prop('checked', true);
                 } else {
-                    $('#flexRadioNumber0').attr('checked', true);
+                    $('#flexRadioNumber0').prop('checked', true);
                     $('#ConstraintInput0').val(linkInfos[3]);
+                    $('#ConstraintInput0').show();
                 }
 
                 if (linkInfos[4] == "+INF") {
-                    $('#flexRadioPosINF1').attr('checked', true);
+                    $('#flexRadioPosINF1').prop('checked', true);
                 } else if (linkInfos[4] == "-INF") {
-                    $('#flexRadioNegINF1').attr('checked', true);
+                    $('#flexRadioNegINF1').prop('checked', true);
                 } else {
-                    $('#flexRadioNumber1').attr('checked', true);
+                    $('#flexRadioNumber1').prop('checked', true);
                     $('#ConstraintInput1').val(linkInfos[4]);
+                    $('#ConstraintInput1').show();
                 }
             } else {
                 $linkPropertiesStatic.show();
@@ -1322,40 +1509,7 @@ $(document).ready(function () {
             $linkPropertiesStatic.hide();
             return true;
         },
-        onOpGroupSelect: function (opGroupId) {
-            $opGroupProperties.show();
-            var infos = $flowchart.flowchart('getOpGroupInfos', opGroupId);
-            var parentTitle = infos.parent.slice(0, -2);
-            for (i = 0; i < $opGroupParent.length; i++) {
-                if ($opGroupParent.options[i].text == parentTitle) {
-                    $opGroupParent.selectedIndex = $opGroupParent.options[i].value;
-                    break;
-                }
-            }
-            $parentSubGroup.selectedIndex = Number(infos.parent.slice(-1));
-            $opGroupTitle.val(infos.title.slice(0, -2));
-            $subGroup.selectedIndex = Number(infos.title.slice(-1));
-            return true;
-        },
-        onOpGroupUnselect: function () {
-            $opGroupProperties.hide();
-            clearOpGroupInfos();
-            return true;
-        },
-        onOpGroupDelete: function (opGroupId) {
-            deleteOpGroupData(opGroupId);
-            return true;
-        },
     });
-
-    /*
-    $operatorTitle.keyup(function () {
-        var selectedOperatorId = $flowchart.flowchart('getSelectedOperatorId');
-        if (selectedOperatorId != null) {
-            $flowchart.flowchart('setOperatorTitle', selectedOperatorId, $operatorTitle.val());
-        }
-    });
-    */
 
     $linkColor.change(function () {
         var selectedLinkId = $flowchart.flowchart('getSelectedLinkId');
@@ -1405,13 +1559,40 @@ $(document).ready(function () {
         constraintData.constraint1 = constraintInput1;
     });
     //--- end
-    //--- operator and link properties
+    //--- link properties
     //-----------------------------------------
 
 
     //-----------------------------------------
     //--- opGroup properties
     //--- start
+    $flowchart.flowchart({
+        onOpGroupSelect: function (opGroupId) {
+            $opGroupProperties.show();
+            var infos = $flowchart.flowchart('getOpGroupInfos', opGroupId);
+            var parentTitle = infos.parent.slice(0, -2);
+            for (i = 0; i < $opGroupParent.length; i++) {
+                if ($opGroupParent.options[i].text == parentTitle) {
+                    $opGroupParent.selectedIndex = $opGroupParent.options[i].value;
+                    break;
+                }
+            }
+            $parentSubGroup.selectedIndex = Number(infos.parent.slice(-1));
+            $opGroupTitle.val(infos.title.slice(0, -2));
+            $subGroup.selectedIndex = Number(infos.title.slice(-1));
+            return true;
+        },
+        onOpGroupUnselect: function () {
+            $opGroupProperties.hide();
+            clearOpGroupInfos();
+            return true;
+        },
+        onOpGroupDelete: function (opGroupId) {
+            deleteOpGroupData(opGroupId);
+            return true;
+        },
+    });
+
     var $opGroupProperties = $('#opGroup_properties');
     $opGroupProperties.hide();
 
@@ -1486,7 +1667,6 @@ $(document).ready(function () {
         $opGroupParent.selectedIndex = 0;
         $parentSubGroup.selectedIndex = 0;
     }
-
     //--- end
     //--- opGroup properties
     //-----------------------------------------
@@ -1502,11 +1682,154 @@ $(document).ready(function () {
     //--- delete operator / link / group button
     //-----------------------------------------
 
+    function formatConstraintsForJSON() {
+        var constraints = {};
+        var keyArray = Object.keys(dependencyManager);
+
+        for (let i = 0; i < keyArray.length; i++) {
+            var constraintData = dependencyManager[keyArray[i]];
+            constraints[keyArray[i]] = {
+                d_hi: constraintData.constraint0,
+                d_lo: constraintData.constraint1,
+                dest: constraintData.fromOperator,
+                dest_hook: 0,
+                src: constraintData.toOperator,
+                src_hook: 0,
+            };
+        }
+        return constraints;
+    }
+
+    function formatInstructionsForJSON() {
+        var instructions = {};
+        for (let r = 0; r < cellArray.length; r++) {
+            for (let c = 0; c < cellArray[r].length; c++) {
+                if (typeof cellArray[r][c] != "undefined") {
+                    var cellName = r + "_" + c;
+                    var arr = [];
+                    for (let i = 0; i < cellArray[r][c].length; i++) {
+                        var lineObj = cellArray[r][c][i];
+                        arr.push(Number(lineObj.ID));
+                    }
+                    instructions[cellName] = arr;
+                }
+            }
+        }
+
+        return instructions;
+    }
+
+    function formatProgramLineForJSON() {
+        var programList = [];
+        var keyArray = Object.keys(programManager);
+        for (let i = 0; i < keyArray.length; i++) {
+            var pLine = programManager[keyArray[i]];
+            if (pLine instanceof programLine) {
+                var instructionInfo = {
+                    id: pLine.getId(),
+                    immediate: 0,
+                    name: pLine.getName(),
+                    segment_values: pLine.getFullOptionsObject(),
+                    segment_values_str: null,
+                    timelabels: [[4, ""], [3, ""], [2, ""], [1, ""], [0, ""]],
+                    timestamps: [[4, -1], [3, -1], [2, -1], [1, -1], [0, -1]],
+                };
+                programList.push(instructionInfo);
+            }
+        }
+        return programList;
+    }
+
+    function formatOperationsForJSON() {
+        var operations = {};
+        var keyArray = Object.keys(relationManager);
+        for (let i = 0; i < keyArray.length; i++) {
+            var groupUnitId = keyArray[i];
+            var groupUnitData = relationManager[groupUnitId];
+            var childArr0 = groupUnitData["0"].childGroup.concat(groupUnitData["0"].childNode);
+            if (childArr0.length == 0) {
+                childArr0 = null;
+            }
+            var childArr1 = groupUnitData["1"].childGroup.concat(groupUnitData["1"].childNode);
+            if (childArr1.length == 0) {
+                childArr1 = null;
+            }
+            var operationInfo = {
+                children0: childArr0,
+                children1: childArr1,
+                dont_touch: groupUnitData.dont_touch,
+                expand_loop: groupUnitData.expand_loop,
+                ignore_children: groupUnitData.ignore_children,
+                is_bulk: groupUnitData.is_bulk,
+                issue_slot: groupUnitData.issue_slot,
+                name: groupUnitId,
+                rot: groupUnitData.rot,
+                scheduled_time: groupUnitData.scheduled_time,
+                shift_factor: groupUnitData.shift_factor
+            }
+            operations[groupUnitId] = operationInfo;
+        }
+
+        keyArray = Object.keys(nodeMap);
+        for (i = 0; i < keyArray.length; i++) {
+            var nodeUnitId = keyArray[i];
+            var nodeUnitData = nodeMap[nodeUnitId];
+            var operationInfo = {
+                children0: null,
+                children1: null,
+                dont_touch: nodeUnitData.dont_touch,
+                expand_loop: nodeUnitData.expand_loop,
+                ignore_children: nodeUnitData.ignore_children,
+                is_bulk: nodeUnitData.is_bulk,
+                issue_slot: nodeUnitData.issue_slot,
+                name: nodeUnitId,
+                rot: nodeUnitData.rot,
+                scheduled_time: nodeUnitData.scheduled_time,
+                shift_factor: nodeUnitData.shift_factor
+            }
+            operations[nodeUnitId] = operationInfo;
+        }
+
+        return operations;
+    }
 
     //-----------------------------------------
     //--- save and load
     //--- start
     function generateJSON() {
+        //var instructions = formatInstructionsForJSON();
+        var data = {
+            constraints: formatConstraintsForJSON(),
+            entry: "ROOT",
+            instr_lists: formatInstructionsForJSON(),
+            isa: {
+                instr_bitwidth: 27,
+                instr_code_bitwidth: 4,
+                instruction_list: formatProgramLineForJSON(),
+                instruction_templates: isaData.instruction_templates,
+            },
+            operations: formatOperationsForJSON(),
+            flowchart: $flowchart.flowchart('getData'),
+        };
+        $('#flowchart_data').val(JSON.stringify(data, function (k, v) {
+            if (v instanceof Array) {//keep array in one line except that it contains object
+                for (let i = 0; i < v.length; i++) {
+                    if (v[i] === Object(v[i])) {
+                        return v;
+                    }
+                }
+                return JSON.stringify(v);
+            }
+            return v;
+        }, 2).replace(/\\/g, '')
+            .replace(/\"\[/g, '[')
+            .replace(/\]\"/g, ']')
+            .replace(/\"\{/g, '{')
+            .replace(/\}\"/g, '}'));
+
+        const downloadLink = document.querySelector("a.dynamic");
+        downloadLink.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent($('#flowchart_data').val()));
+        downloadLink.setAttribute('download', 'descriptor_test.json')
 
     }
     $('#get_json').click(generateJSON);

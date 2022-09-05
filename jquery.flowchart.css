@@ -149,6 +149,10 @@
     cursor: move;
 }
 
+.flowchart-operator .flowchart-operator-entry {
+    background-color: lightyellow;    
+}
+
 .flowchart-operator .flowchart-operator-inputs-outputs {
     display: table;
     width: 100%;
