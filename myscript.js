@@ -22,7 +22,6 @@ $(document).ready(function () {
     //RELATION section
     //const relationObj = {};
     const phaseObj = {};//{'HALT' : num, 'REFI': num, 'DPU' : num, ...}
-    //DEPENDENCY section
 
     //a potential programLine class
     class programLine {
@@ -1213,7 +1212,6 @@ $(document).ready(function () {
         maxScale: 5,
         overflow: scroll,
     });
-    panzoom.pan(10, 10);
     panzoom.zoom(1, { animate: true });
 
     $('#zoom_ori').click(function () {

@@ -150,7 +150,7 @@
 }
 
 .flowchart-operator .flowchart-operator-entry {
-    background-color: lightyellow;    
+    background-color: red;    
 }
 
 .flowchart-operator .flowchart-operator-inputs-outputs {

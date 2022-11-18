@@ -912,6 +912,8 @@ jQuery(function ($) {
             this.data.operators[operatorId] = operatorData;
             this.data.operators[operatorId].internal.els = fullElement;
 
+            console.log("New operator:");
+            console.log(this.data.operators[operatorId]);
             if (operatorId == this.selectedOperatorId) {
                 this._addSelectedClass(operatorId);
             }
@@ -1522,9 +1524,40 @@ jQuery(function ($) {
                 //move all child operators and child groups together with the triggerring element
                 var opGrId = opGroup_id;
                 var opGrStack = [];
-                var opGrMoved = [];
 
                 opGrStack.push(opGroup_id);
+                while (opGrStack.length > 0) {
+                    opGrId = opGrStack.pop();
+                    var opGrData = self.data.opGroups[opGrId];
+                    //move the group itself except the triggerring element 
+                    if (opGrId != opGroup_id) {
+                        opGrData.geometric.rect_x = opGrData.geometric.rect_x + delta_X;
+                        opGrData.geometric.rect_y = opGrData.geometric.rect_y + delta_Y;
+                        opGrData.internal.els.rect.css({ top: opGrData.geometric.rect_y, left: opGrData.geometric.rect_x });
+                    }
+
+                    for (var i = 0; i < opGrData.childNode.length; i++) {
+                        var opId = opGrData.childNode[i];
+                        var opData = self.data.operators[opId];
+                        var oriTop = parseInt(opData.internal.els.operator.css('top'));
+                        var oriLeft = parseInt(opData.internal.els.operator.css('left'));
+                        opData.internal.els.operator.css({ top: oriTop + delta_Y, left: oriLeft + delta_X });
+                        opData.top = parseInt(opData.internal.els.operator.css('top'));
+                        opData.left = parseInt(opData.internal.els.operator.css('left'));
+
+                        self.refreshLinkPositionsByOperatorId(opId);
+                    }
+
+                    opGrData.entry.top = parseInt(opGrData.internal.els.entry.css('top'));
+                    opGrData.entry.left = parseInt(opGrData.internal.els.entry.css('left'));
+
+                    for (var j = 0; j < opGrData.childGroup.length; j++) {
+                        opGrStack.push(opGrData.childGroup[j]);
+                    }
+
+                }
+                /*-------------------------------------old DFS------------------------------------------------*/
+                /*
                 while (typeof (opGrId) != "undefined") {
                     var hasUnmovedChild = false;
                     var opGrData = self.data.opGroups[opGrId];
@@ -1569,6 +1602,8 @@ jQuery(function ($) {
                         opGrId = opGrStack.pop();
                     }
                 }
+                */
+
 
                 opGroupData.entry.top = parseInt(opGroupData.internal.els.entry.css('top'));
                 opGroupData.entry.left = parseInt(opGroupData.internal.els.entry.css('left'));
@@ -1872,7 +1907,7 @@ jQuery(function ($) {
             var cbName = 'on' + name.charAt(0).toUpperCase() + name.slice(1);
             var ret = this.options[cbName].apply(this, params);
             if (ret !== false) {
-                var returnHash = {'result': ret};
+                var returnHash = { 'result': ret };
                 this.element.trigger(name, params.concat([returnHash]));
                 ret = returnHash['result'];
             }
