@@ -36,6 +36,8 @@
 
 .flowchart-opGroup-checked {
     pointer-events: all;
+    border-color: darkblue;
+    border-width: medium;
 }
 
 .flowchart-operator-connector {
@@ -121,6 +123,7 @@
     background: #FAFAFA;
     pointer-events: auto;
     z-index: 1;
+    height: 36px;
 }
 
 .flowchart-operator.hover {
@@ -132,19 +135,23 @@
 }
 
 .flowchart-operator.noGroup {
+    height: 38px;
     border: 2px solid red;
 }
 
 .flowchart-operator .flowchart-operator-title {
     width: 100%;
-    padding: 5px;
-    font-weight: bold;
+    padding: 3px;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: small;
+    font-weight: normal;
     box-sizing: border-box;
     border-bottom: 1px solid #DDDDDD;
     background: #F0F0F0;
-    height: auto;
+    height: 24px;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: center;
     white-space: nowrap;
     cursor: move;
 }
@@ -176,6 +183,7 @@
     display: table;
     width: 100%;
 }
+
 .flowchart-vertical .flowchart-operator-connector-set {
     display: table-cell;
 }
@@ -209,12 +217,12 @@
     top: 0px;
 }
 .flowchart-vertical .flowchart-operator-outputs .flowchart-operator-connector-arrow {
-    bottom: -20px;
+    bottom: -11px;
     top: auto;
 }
 .flowchart-vertical .flowchart-operator-outputs .flowchart-operator-connector-small-arrow {
     left: calc(50% - 5px);
-    bottom: -12px;
+    bottom: -3px;
     top: auto;
 }
 .flowchart-vertical .flowchart-link rect {
@@ -222,13 +230,36 @@
 }
 
 /*
- * flowchart-operator-body
+ * flowchart-operator-body not in use
  */
 .flowchart-operator-body {
     padding: 5px;
     cursor: move;
 }
 
+/*
+ * flowchart-opGroup
+ */
+.flowchart-opGroup .noGroup {
+    border: 2px solid red;
+}
+
+.flowchart-opGroup-toggleButton {
+    margin-top: 5px;
+    margin-right: 5px;
+    pointer-events: auto;
+}
+
+.flowchart-opGroup-dragHandleBar {
+    margin-top: 5px;
+    margin-right: 5px;
+    pointer-events: auto;
+    background-color: #31D2F2;
+}
+
+/*
+ * toggleButton
+ */
 .switch {
     position: relative;
     display: inline-block;
@@ -289,22 +320,3 @@ input:checked + .slider:before {
   border-radius: 50%;
 }
 
-/*
- * flowchart-opGroup
- */
-.flowchart-opGroup .noGroup {
-    border: 2px solid red;
-}
-
-.flowchart-opGroup-toggleButton {
-    margin-top: 5px;
-    margin-right: 5px;
-    pointer-events: auto;
-}
-
-.flowchart-opGroup-dragHandleBar {
-    margin-top: 5px;
-    margin-right: 5px;
-    pointer-events: auto;
-    background-color: #31D2F2;
-}

@@ -2,6 +2,7 @@
 This is version 0.0.4
 */
 $(document).ready(function () {
+
     //Store the json content as an object
     var isaData = {};
     //Map the value of "select" to instruction name
@@ -16,34 +17,47 @@ $(document).ready(function () {
     var programManager = {};
 
     //CODE section
+    const FABRIC_ROW = 5;
+    const FABRIC_COLUMN = 6;
     var cellArray;
-    let cellString = "";//"r,c"
+    let cellString = ""; //"r,c"
 
     //RELATION section
     //const relationObj = {};
     const phaseObj = {};//{'HALT' : num, 'REFI': num, 'DPU' : num, ...}
 
-    //a potential programLine class
+    //programLine class
     class programLine {
         constructor() {
             this.segmentOptionObject = {};
             this.isValid = false;
+            this.resConstraints = null;
         }
 
         createLineFromUserInput(userInputArg) {
-            if (!this.id) this.id = instrID++;
+            if (!this.lineNum) {
+                this.lineNum = instrID++;
+            }
+            if (!this.id) {
+                this.id = getLineNumberString(this.lineNum);
+            }
             this.userInput = userInputArg;
             this.name = this.userInput.substring(0, this.userInput.indexOf(" "));
             this.phase = phaseObj[this.name];
+            this.immediate = 0;
             this.segmentOptStr = this.userInput.substring(this.userInput.indexOf(" ") + 1, this.userInput.length);
             var segmentOptionArray = this.segmentOptStr.split(', ');
             for (let count = 0; count < segmentOptionArray.length; count += 1) {
                 var segmentPair = segmentOptionArray[count].split('=');
                 this.segmentOptionObject[String(segmentPair[0])] = segmentPair[1];
             }
+            this.segmentValuesStr = null;
+            this.timelabels = [[4, ""], [3, ""], [2, ""], [1, ""], [0, ""]];
+            this.timestamps = [[4, -1], [3, -1], [2, -1], [1, -1], [0, -1]];
             //generate full line
             this.generateFullInstructionLine();
             this.generateFullOptionsObject();
+            this.yieldConstraints();
         }
 
         setCellPosition(rowArg, colArg) {
@@ -51,12 +65,28 @@ $(document).ready(function () {
             this.column = colArg;
         }
 
-        setWorkingLine(wlArg) {
-            this.workingLine = wlArg;
-        }
-
         setValid(val) {
             this.isvalid = val;
+        }
+
+        setId(newId) {
+            this.id = newId;
+        }
+
+        setImmediate(val) {
+            this.immediate = val;
+        }
+
+        setSegmentValuesStr(str) {
+            this.segmentValuesStr = str;
+        }
+
+        setTimelabels(labels) {
+            this.timelabels = labels;
+        }
+
+        setTimestamps(stamps) {
+            this.timestamps = stamps;
         }
 
         getIsValid() {
@@ -69,6 +99,10 @@ $(document).ready(function () {
 
         getId() {
             return this.id;
+        }
+
+        getLineNum() {
+            return this.lineNum;
         }
 
         getUserInput() {
@@ -91,21 +125,37 @@ $(document).ready(function () {
             return this.fullOptionsObject;
         }
 
+        getImmediate(val) {
+            return this.immediate;
+        }
+
+        getSegmentValuesStr() {
+            return this.segmentValuesStr;
+        }
+
+        getTimelabels() {
+            return this.timelabels;
+        }
+
+        getTimestamps() {
+            return this.timestamps;
+        }
+
         getNodeArray() {
             let nodeArr = [];
             for (let count = 1; count < Number(this.phase) + 1; count++) {
-                nodeArr.push("Op_" + getLineNumberString(this.getId()) + "_" + count);
+                nodeArr.push("Op_" + this.getId() + "_" + count);
             }
             return nodeArr;
         }
 
         generateFullInstructionLine() {
-            var instructionList = isaData.instruction_templates;
+            var insTemplates = isaData.instruction_templates;
 
-            for (let i in instructionList) {
-                if (instructionList[i].name == this.name) {
-                    var segmentList = instructionList[i].segment_templates;
-                    this.fullLine = instructionList[i].name;
+            for (let i in insTemplates) {
+                if (insTemplates[i].name == this.name) {
+                    var segmentList = insTemplates[i].segment_templates;
+                    this.fullLine = insTemplates[i].name;
 
                     for (let j in segmentList) {
                         var segValue = this.segmentOptionObject[segmentList[j].name];
@@ -123,11 +173,11 @@ $(document).ready(function () {
         }
 
         generateFullOptionsObject() {
-            var instructionList = isaData.instruction_templates;
+            var insTemplates = isaData.instruction_templates;
 
-            for (let i in instructionList) {
-                if (instructionList[i].name == this.name) {
-                    var segmentList = instructionList[i].segment_templates;
+            for (let i in insTemplates) {
+                if (insTemplates[i].name == this.name) {
+                    var segmentList = insTemplates[i].segment_templates;
                     this.fullOptionsObject = {};
 
                     for (let j in segmentList) {
@@ -145,25 +195,58 @@ $(document).ready(function () {
             }
         }
 
+        yieldConstraints() {
+            var args = {};
+            switch (this.name) {
+                case 'WAIT':
+                    args = { cycle: Number(this.segmentOptionObject.cycle) };
+                    break;
+                case 'REFI':
+                    args = { l1_iter: Number(this.segmentOptionObject.l1_iter) };
+                    break;
+                case 'SRAM':
+                    args = { hops: Number(this.segmentOptionObject.hops), l1_iter: Number(this.segmentOptionObject.l1_iter) };
+                    break;
+            }
+            this.resConstraints = $cellUnit.timingConstraints('getConstraints', this.name, args);
+        }
+
+        getConstraints() {
+            return this.resConstraints;
+        }
     }
 
-
-    //For testing purpose, a division to display the loaded json file
-    const schemaDiv = $('#schema');
-
+    var $cellUnit = $('#cellUnitContainer');
     $('#inputFiles').change(handleFileSelect);
-    $('#cellUnitContainer').click(handleClickOnCellUnitContainer);
+    $cellUnit.click(handleClickOnCellUnitContainer);
+    $cellUnit.timingConstraints({});//init plugin
 
+    /**
+     * Program module
+     * 
+     */
     function initCell() {
-        cellArray = new Array(new Array(3), new Array(3));
+        cellArray = new Array(FABRIC_ROW);
+        for (i = 0; i < FABRIC_ROW; i++) {
+            cellArray[i] = new Array(FABRIC_COLUMN);
+        }
     }
 
+    /**
+     * Diagram module
+     * 
+     */
     function initRelation() {
         relationManager = {};
         createOpGroup("ROOT", "0", "ROOT", "0");
     }
 
     /* Load the selected file -> expected "isa.json" */
+    /**
+     * I/O module
+     * Load the files selected by user
+     * @param {any} evt
+     */
     function handleFileSelect(evt) {
         var file = evt.target.files[0]; // FileList object
         var reader = new FileReader();
@@ -179,27 +262,64 @@ $(document).ready(function () {
         reader.readAsDataURL(file);
     }
 
+    /**
+     * I/O module
+     * 
+     * @param {any} filename
+     * @param {any} data
+     */
     function parseInputfile(filename, data) {
         if (filename.startsWith("isa")) {
-            updateInstructionOptions(data);
+            isaData = data;
+            refreshHomepage(true);
         } else if (filename.startsWith("descriptor")) {
             restoreProgramFromJSON(data);
         }
     }
 
+    /**
+    * I/O module
+    * 
+    * @param {any} manasObj
+    */
     function restoreProgramFromJSON(manasObj) {
-        if ("isa" in manasObj) {
-            updateInstructionOptions(manasObj.isa);
+        var hasGraph = false;
+
+        if (!('isa' in manasObj)) {
+            return;
         }
-    }
 
-    /* update the global object and instrcution options */
-    function updateInstructionOptions(isaObj) {
-        isaData = isaObj;
-        console.log(isaData);
+        if (!('instr_lists' in manasObj)) {
+            return;
+        }
+
+        if (!('operations' in manasObj)) {
+            return;
+        }
+
+        if (!('constraints' in manasObj)) {
+            return;
+        }
+
+        if ('flowchart' in manasObj) {
+            hasGraph = true;
+        }
+
+        isaData = manasObj.isa;
         refreshHomepage(true);
+
+        if (hasGraph) {
+            restoreWithGraph(manasObj);
+        } else {
+            restoreWithoutGraph(manasObj);
+        }
+
     }
 
+    /**
+     * 
+     * @param {any} newISA
+     */
     function refreshHomepage(newISA) {
         clearContent(newISA);
         clearVariables(newISA);
@@ -213,7 +333,10 @@ $(document).ready(function () {
             initRelation();
         }
     }
-
+    /**
+     * 
+     * @param {any} newISA
+     */
     function clearVariables(newISA) {
         instrID = 1;
         textareaWl = 0;
@@ -228,7 +351,10 @@ $(document).ready(function () {
             delete instructionMap[key];
         }
     }
-
+    /**
+     * 
+     * @param {any} newISA
+     */
     /* Remove current content before appending the new one */
     function clearContent(newISA) {
         document.getElementById("userInput").value = null;
@@ -245,21 +371,26 @@ $(document).ready(function () {
         optionInstruction.innerText = "Instruction Set";
         instrOptionsSelect.innerHTML = "";
         instrOptionsSelect.appendChild(optionInstruction);
-
-        schemaDiv.innerHTML = "";
     }
-
+    /**
+     * 
+     * @param {any} 
+     */
     function prepareInstructionInfo() {
-        var instructionList = isaData.instruction_templates;
+        var insTemplates = isaData.instruction_templates;
         var insCounter = 0;
 
-        for (let i in instructionList) {
+        for (let i in insTemplates) {
             insCounter += 1;
-            instructionMap[insCounter] = instructionList[i].name;
-            phaseObj[instructionList[i].name] = instructionList[i].phase;
+            instructionMap[insCounter] = insTemplates[i].name;
+            phaseObj[insTemplates[i].name] = insTemplates[i].phase;
         }
     }
 
+    /**
+     * 
+     * @param {any} 
+     */
     /* append new instruction options */
     function loadInstrOptions() {
         var instrOptionsSelect = document.getElementById('showInstrOptions');
@@ -283,6 +414,271 @@ $(document).ready(function () {
         instrOptionsSelect.addEventListener("change", handleNewInstructionSelect);
     }
 
+    function progLineFromList(insArray, cellList) {
+        let count = 0;
+        var insTemplates = isaData.instruction_templates;
+
+        for (; count < insArray.length; count++) {
+            var insItem = insArray[count];
+            var insertContent = insItem.name;
+            var segValues = insItem.segment_values;
+            var defaultVal = 0;
+
+            for (let item in insTemplates) {
+                if (insTemplates[item].name == insItem.name) {
+                    var segmentList = insTemplates[item].segment_templates;
+                    for (let segItem in segmentList) {
+                        var segName = segmentList[segItem].name;
+                        var segval = segValues[segName];
+                        if (typeof segval != 'undefined') {
+                            insertContent += ", " + segName + "=" + segval;
+                        }
+                        else {
+                            insertContent += ", " + segName + "=" + defaultVal;
+                        }
+                    }
+                    break;
+                }
+            }
+
+            if (insertContent.indexOf(',') > 0) {
+                insertContent = insertContent.substring(0, insertContent.indexOf(',')) + insertContent.substring(insertContent.indexOf(',') + 1, insertContent.length);
+            } else {
+                insertContent = insertContent + " ";
+            }
+            
+            let pLine = new programLine();
+            pLine.createLineFromUserInput(insertContent);
+
+            var timeLabel = insItem.timelabels[0][1];
+            if (timeLabel != "") {
+                pLine.setId(timeLabel.substring(3, timeLabel.lastIndexOf("_")));
+            } else {
+                pLine.setId(getLineNumberString(insItem.id));
+            }
+            pLine.setImmediate(insItem.immediate);
+            pLine.setSegmentValuesStr(insItem.segment_values_str);
+            pLine.setTimelabels(insItem.timelabels);
+            pLine.setTimestamps(insItem.timestamps);
+
+            cellString = '';
+            for (let key in cellList) {
+                cellItem = cellList[key];
+                let index = 0;
+                for (; index < cellItem.length; index++) {
+                    if (cellItem[index] == insItem.id) {
+                        cellString = key;
+                        break;
+                    }
+                }
+                if (cellString.length > 0) {
+                    break;
+                }
+            }
+            pLine.setCellPosition(Number(cellString[0]), Number(cellString[2]));
+
+            programManager[pLine.getLineNum()] = pLine;
+            appendNewLineToCellArray(pLine);
+            var nodeArray = pLine.getNodeArray();
+            for (let num = 0; num < nodeArray.length; num++) {
+                createNode(nodeArray[num]);
+            }
+            updateSpanWl(pLine.getLineNum());
+
+        }
+    }
+
+    function restoreWithGraph(manasObj) {
+        var graphData = manasObj.flowchart;
+        if (typeof isaData.instruction_list != 'undefined') {
+            progLineFromList(isaData.instruction_list, manasObj.instr_lists);
+        }
+        else {
+            alert("Cannot find isa.instruction_list!");
+        }
+
+        //get group data, create opGroup withoutchild node
+        //get group from flowchart
+        //get group info from operations
+        var opGroupsData = graphData.opGroups;
+        var operationsData = manasObj.operations;
+        var key = null;
+        for (key in opGroupsData) {
+            var gUnitId = key.slice(0, -2);
+            var sub_num = Number(key.slice(-1));
+            if (typeof relationManager[gUnitId] == 'undefined') {
+                createGroupUnitData(gUnitId, opGroupsData[key].parent);
+            }
+            relationManager[gUnitId][sub_num] = opGroupsData[key];
+            restoreOpGroup(gUnitId, key.slice(-1), relationManager[gUnitId][sub_num]);
+            relationManager[gUnitId][sub_num].childNode = opGroupsData[key].childNode;
+
+            if (typeof operationsData[gUnitId] != 'undefined') {
+                relationManager[gUnitId].dont_touch = operationsData[gUnitId].dont_touch;
+                relationManager[gUnitId].expand_loop = operationsData[gUnitId].expand_loop;
+                relationManager[gUnitId].ignore_children = operationsData[gUnitId].ignore_children;
+                relationManager[gUnitId].is_bulk = operationsData[gUnitId].is_bulk;
+                relationManager[gUnitId].issue_slot = operationsData[gUnitId].issue_slot;
+                relationManager[gUnitId].name = operationsData[gUnitId].name;
+                relationManager[gUnitId].rot = operationsData[gUnitId].rot;
+                relationManager[gUnitId].scheduled_time = operationsData[gUnitId].scheduled_time;
+                relationManager[gUnitId].shift_factor = operationsData[gUnitId].shift_factor;
+            } else {
+                alert("Missing" + gUnitId + "in 'operations'!!!");
+            }
+        }
+
+        var operatorsData = graphData.operators;
+        for (key in operatorsData) {
+            if (key.startsWith('Op_')) {
+                var nodeData = operatorsData[key];
+                if (!(key in nodeMap)) {
+                    alert("Node " + key + " is not generated with instruction!!! It will be created anyway.");
+                } 
+                nodeMap[key] = nodeData;
+                $('#flowchartworkspace').flowchart('createOperator', nodeMap[key].properties.title, nodeMap[key], true);
+            }
+        }
+
+        //add links to flowchart
+        var consList = manasObj.constraints;
+        var newConstraintArray = [];
+        key = null;
+        for (key in consList) {
+            constraintData = createConstraintData(consList[key].src, consList[key].dest, consList[key].d_hi, consList[key].d_lo);
+            createConstraint(key, constraintData);
+            newConstraintArray.push(key);
+        }
+
+        addLinkToFlowchartData(newConstraintArray);
+    }
+
+    function restoreWithoutGraph(manasObj) {
+        if (typeof isaData.instruction_list != 'undefined') {
+            progLineFromList(isaData.instruction_list, manasObj.instr_lists);
+        }
+        else {
+            alert("Cannot find isa.instruction_list!");
+        }
+
+        //separate the normal node and group node from the "operations" and create nodeUnit for normal node.  
+        var gUnitList = {};
+        var opsList = manasObj.operations;
+        var item = null;
+        for (item in opsList) {
+            var childrenArr0 = opsList[item].children0;
+            var childrenArr1 = opsList[item].children1;
+            if (childrenArr0 != null || childrenArr1 != null) {
+                gUnitList[item] = opsList[item];
+            } else {
+                if (item in nodeMap) {
+                    var nodeUnit = nodeMap[item];
+                    nodeUnit.children0 = null;
+                    nodeUnit.children1 = null;
+                    nodeUnit.dont_touch = opsList[item].dont_touch;
+                    nodeUnit.expand_loop = opsList[item].expand_loop;
+                    nodeUnit.ignore_children = opsList[item].ignore_children;
+                    nodeUnit.is_bulk = opsList[item].is_bulk;
+                    nodeUnit.issue_slot = opsList[item].issue_slot;
+                    nodeUnit.name = opsList[item].name;
+                    nodeUnit.rot = opsList[item].rot;
+                    nodeUnit.scheduled_time = opsList[item].scheduled_time;
+                    nodeUnit.shift_factor = opsList[item].shift_factor;
+                } else {
+                    console.log("Unexpected node: " + item);
+                }
+            }
+        }
+
+        //add groups to flowchart before nodes 
+        //order: topdown from ROOT so that child group can be placed inside the parent group
+        if (!('ROOT' in gUnitList)) {
+            alert("ROOT is missing.");
+        } else {
+            item = null;
+            var gUnitId = "ROOT";
+            var gUnitStack = [];
+
+            gUnitStack.push("ROOT");
+            while (gUnitStack.length > 0) {
+                gUnitId = gUnitStack.pop();
+                var gUnitData = gUnitList[gUnitId];
+                relationManager[gUnitId].dont_touch = gUnitData.dont_touch;
+                relationManager[gUnitId].expand_loop = gUnitData.expand_loop;
+                relationManager[gUnitId].ignore_children = gUnitData.ignore_children;
+                relationManager[gUnitId].is_bulk = gUnitData.is_bulk;
+                relationManager[gUnitId].issue_slot = gUnitData.issue_slot;
+                relationManager[gUnitId].name = gUnitData.name;
+                relationManager[gUnitId].rot = gUnitData.rot;
+                relationManager[gUnitId].scheduled_time = gUnitData.scheduled_time;
+                relationManager[gUnitId].shift_factor = gUnitData.shift_factor;
+
+                if (gUnitData.children0 != null) {
+                    for (let count = 0; count < gUnitData.children0.length; count++) {
+                        var item = gUnitData.children0[count];
+                        if (item in gUnitList) {
+                            createOpGroup(item, "0", gUnitId, "0");
+                        } else {
+                            relationManager[gUnitId][0].childNode.push(item);
+                            nodeMap[item].opGroup = gUnitId + "_0";
+                        }
+                    }
+                }
+
+                for (var j = 0; j < relationManager[gUnitId][0].childGroup.length; j++) {
+                    gUnitStack.push(relationManager[gUnitId][0].childGroup[j]);
+                }
+
+                if (gUnitData.children1 != null) {
+                    for (let count = 0; count < gUnitData.children1.length; count++) {
+                        var item = gUnitData.children1[count];
+                        if (item in gUnitList) {
+                            createOpGroup(item, "0", gUnitId, "1");
+                        } else {
+                            relationManager[gUnitId][1].childNode.push(item);
+                            nodeMap[item].opGroup = gUnitId + "_1";
+                        }
+                    }
+                }
+
+                for (var j = 0; j < relationManager[gUnitId][1].childGroup.length; j++) {
+                    gUnitStack.push(relationManager[gUnitId][1].childGroup[j]);
+                }
+
+            }
+        }
+
+        //add nodes to flowchart at the default position in parent opGroup
+        var key = null;
+        for (key in nodeMap) {
+            var newOperatorData = nodeMap[key];
+            $('#flowchartworkspace').flowchart('createOperator', newOperatorData.properties.title, newOperatorData, false);
+        }     
+
+        //add links to flowchart
+        var consList = manasObj.constraints;
+        var newConstraintArray = [];
+        key = null;
+        for (key in consList) {
+            constraintData = createConstraintData(consList[key].src, consList[key].dest, consList[key].d_hi, consList[key].d_lo);
+            createConstraint(key, constraintData);
+            newConstraintArray.push(key);
+        }       
+        
+        addLinkToFlowchartData(newConstraintArray);
+    }
+
+    /**
+     * 
+     * 
+     * Program module
+     * 
+     * /
+
+    /**
+     * 
+     * @param {any} evt
+     */
     /* Update user input field if user selects an instruction option or a line */
     function handleNewInstructionSelect(evt) {
         var selectedInstr = instructionMap[evt.target.value];
@@ -299,6 +695,10 @@ $(document).ready(function () {
         }
     }
 
+    /**
+     * 
+     * @param {any} content
+     */
     function loadselectedProgramLine(content) {
         var lineId = Number(content.substring(0, 4));
         var pLine = programManager[lineId];
@@ -316,20 +716,27 @@ $(document).ready(function () {
         }
     }
 
+    /**
+     * 
+     * @param {any} isNewInstruction
+     * @param {any} selectedInstr
+     * @param {any} segmentOptStr
+     * @param {any} cellPosition
+     */
     function prepareEditableFields(isNewInstruction, selectedInstr, segmentOptStr, cellPosition) {
-        var instructionList = isaData.instruction_templates;
+        var insTemplates = isaData.instruction_templates;
         var cellUnitField = document.getElementById("cellUnit");
         var instrInputField = document.getElementById("userInput");
         var editableFields = document.getElementById("editableFields");
 
-        for (let i in instructionList) {
-            if (instructionList[i].name == selectedInstr) {
-                var segmentList = instructionList[i].segment_templates;
+        for (let i in insTemplates) {
+            if (insTemplates[i].name == selectedInstr) {
+                var segmentList = insTemplates[i].segment_templates;
                 var segmentOptionArray;
                 var segmentOptionObject = {};
                 var segmentCounter = 1;
 
-                currentSelectedInstr = instructionList[i].name + " ";
+                currentSelectedInstr = insTemplates[i].name + " ";
                 instrInputField.value = currentSelectedInstr;
 
                 if (!isNewInstruction) {
@@ -555,7 +962,10 @@ $(document).ready(function () {
     $('#editableFields').on('click', '#clearInputButton', function () {
         clearInput();
     });
-
+    /**
+     * 
+     * @param {any} 
+     */
     function clearInput() {
         var editableFields = document.getElementById("editableFields");
         var inputCollection = editableFields.querySelectorAll('.form-control');//get input value
@@ -566,7 +976,10 @@ $(document).ready(function () {
         }
 
     }
-
+    /**
+     * 
+     * @param {any} 
+     */
     /*generate instruction line with user input*/
     function completeInput() {
         var cellUnitField = document.getElementById("cellUnit");
@@ -618,10 +1031,10 @@ $(document).ready(function () {
         if (userInputString.length > 0) {
             instrInputField.value = currentSelectedInstr + userInputString.substring(0, userInputString.length - 2);
         } else {
-            var instructionList = isaData.instruction_templates;
-            for (let i in instructionList) {
-                if (instructionList[i].name == currentSelectedInstr.substring(0, currentSelectedInstr.length - 1)) {
-                    if (Object.keys(instructionList[i].segment_templates).length > 0) {
+            var insTemplates = isaData.instruction_templates;
+            for (let i in insTemplates) {
+                if (insTemplates[i].name == currentSelectedInstr.substring(0, currentSelectedInstr.length - 1)) {
+                    if (Object.keys(insTemplates[i].segment_templates).length > 0) {
                         alert("Empty input.");
                     }
                 }
@@ -633,12 +1046,15 @@ $(document).ready(function () {
     $('#buttonInsert').click(function () {
         insertUserInput();
     });
-
+    /**
+     * 
+     * @param {any} 
+     */
     /* append user input into programming area*/
     function insertUserInput() {
-        var insertContent = document.getElementById("userInput").value;
         let pLine = new programLine();
-
+        var insertContent = document.getElementById("userInput").value;
+        
         //validate the input
         if (insertContent == "") {
             return;
@@ -646,36 +1062,46 @@ $(document).ready(function () {
 
         pLine.createLineFromUserInput(insertContent);
         pLine.setCellPosition(Number(cellString[0]), Number(cellString[2]));
-        programManager[pLine.getId()] = pLine;
+        programManager[pLine.getLineNum()] = pLine;
         appendNewLineToCellArray(pLine);
-        appendNodeFromNewLine(pLine.getNodeArray());
-        updateSpanWl(pLine.getId());
+        appendNodeFromNewLine(pLine.getLineNum(), pLine.getNodeArray());
+        updateSpanWl(pLine.getLineNum());
     }
 
     $('#buttonModify').click(function () {
         modifyUserSelect();
     });
-
+    /**
+     * 
+     * @param {any} 
+     */
     function modifyUserSelect() {
         var substituteContent = document.getElementById("userInput").value;
         let pLine = programManager[textareaWl];
+        let oldCellPos = pLine.getCellPosition();
 
         if (substituteContent == "")
             return;
 
         pLine.createLineFromUserInput(substituteContent);
         pLine.setCellPosition(Number(cellString[0]), Number(cellString[2]));
+        if (pLine.getCellPosition() == oldCellPos) {
+            oldCellPos = null;
+        }
 
-        if (confirm('Modify line: "' + getLineNumberString(pLine.getId()) + "  " + pLine.getUserInput() + '"?')) {
-            programManager[pLine.getId()] = pLine;
-            modifyLineFromCellArray(pLine);
+        if (confirm('Modify line: "' + getLineNumberString(pLine.getLineNum()) + "  " + pLine.getUserInput() + '"?')) {
+            programManager[pLine.getLineNum()] = pLine;
+            modifyLineFromCellArray(pLine, oldCellPos);
         }
     }
 
     $('#buttonDelete').click(function () {
         deleteUserSelect();
     });
-    
+    /**
+     * 
+     * @param {any} 
+     */
     function deleteUserSelect() {
         var instrInputField = document.getElementById("userInput");
         let pLine = programManager[textareaWl];
@@ -684,8 +1110,8 @@ $(document).ready(function () {
             return;
 
         if (pLine instanceof programLine) {
-            if (confirm('Delete line: "' + getLineNumberString(pLine.getId()) + "  " + pLine.getUserInput() + '"?')) {
-                deleteLineFromCellArray(pLine.getCellPosition(), pLine.getId());
+            if (confirm('Delete line: "' + getLineNumberString(pLine.getLineNum()) + "  " + pLine.getUserInput() + '"?')) {
+                deleteLineFromCellArray(pLine.getCellPosition(), pLine.getLineNum());
                 deleteNodeAlongWithProgramLine(pLine.getNodeArray());
                 deleteConstraintAlongWithProgramLine(pLine.getNodeArray());
                 delete programManager[textareaWl];
@@ -693,14 +1119,20 @@ $(document).ready(function () {
             }
         }
     }
-
+    /**
+     * 
+     * @param {any} newVal
+     */
     function updateSpanWl(newVal) {
         var spanWl = document.getElementById("workingLine");
         textareaWl = newVal;
         //console.log("Working on line: " + textareaWl);
         spanWl.innerText = getLineNumberString(textareaWl);
     }
-
+    /**
+     * 
+     * @param {any} number
+     */
     function getLineNumberString(number) {
         var addzero = "";
 
@@ -712,6 +1144,11 @@ $(document).ready(function () {
     }
 
     /****************************************************CODE***********************************************************/
+
+    /**
+     * 
+     * @param {any} evt
+     */
     function handleClickOnCellUnitContainer(evt) {
         evt = evt || window.event;
         var target = evt.target || evt.srcElement, text = target.textContent || target.innerText;
@@ -719,7 +1156,10 @@ $(document).ready(function () {
         updateSpanWl(Number(text.substring(0, 4)));
         loadselectedProgramLine(text);
     }
-
+    /**
+     * 
+     * @param {any} newLine
+     */
     function appendNewLineToCellArray(newLine) {
         var cellRow = newLine.getCellPosition()[0];
         var cellColumn = newLine.getCellPosition()[1];
@@ -728,13 +1168,17 @@ $(document).ready(function () {
         if (typeof cellArray[cellRow][cellColumn] == "undefined") {
             cellArray[cellRow][cellColumn] = new Array();
         }
-        lineObj["ID"] = getLineNumberString(newLine.getId());
+        lineObj["ID"] = getLineNumberString(newLine.getLineNum());
         lineObj["Content"] = newLine.getUserInput();
         cellArray[cellRow][cellColumn].push(lineObj);
         prepareCodeContentField();
     }
-
-    function modifyLineFromCellArray(newLine) {
+    /**
+     * 
+     * @param {any} newLine
+     * @param {any} oldCellPos
+     */
+    function modifyLineFromCellArray(newLine, oldCellPos) {
         var cellRow = newLine.getCellPosition()[0];
         var cellColumn = newLine.getCellPosition()[1];
         var newLineObj = {};
@@ -743,19 +1187,42 @@ $(document).ready(function () {
             return;
         }
 
-        newLineObj["ID"] = getLineNumberString(newLine.getId());
+        newLineObj["ID"] = getLineNumberString(newLine.getLineNum());
         newLineObj["Content"] = newLine.getUserInput();
 
-        for (count = 0; count < cellArray[cellRow][cellColumn].length; count++) {
-            var lineObj = cellArray[cellRow][cellColumn][count];
-            if (lineObj.ID == newLineObj.ID) {
-                cellArray[cellRow][cellColumn][count] = newLineObj;
-                break;
+        if (oldCellPos != null) {
+            var oldCellRow = oldCellPos[0];
+            var oldCellCol = oldCellPos[1];
+            if (typeof cellArray[oldCellRow][oldCellCol] != 'undefined') {
+                for (count = 0; count < cellArray[oldCellRow][oldCellCol].length; count++) {
+                    var lineObj = cellArray[oldCellRow][oldCellCol][count];
+                    if (lineObj.ID == newLineObj.ID) {
+                        cellArray[oldCellRow][oldCellCol].splice(count, 1);
+                        break;
+                    }
+                }
+            } else {
+                alert("Cell unit is not defined!");
+            }
+            
+            cellArray[cellRow][cellColumn].push(newLineObj);
+        } else {
+            for (count = 0; count < cellArray[cellRow][cellColumn].length; count++) {
+                var lineObj = cellArray[cellRow][cellColumn][count];
+                if (lineObj.ID == newLineObj.ID) {
+                    cellArray[cellRow][cellColumn][count] = newLineObj;
+                    break;
+                }
             }
         }
+
         prepareCodeContentField();
     }
-
+    /**
+     * 
+     * @param {any} cell
+     * @param {any} lineID
+     */
     function deleteLineFromCellArray(cell, lineID) {
         var cellRow = cell[0];
         var cellColumn = cell[1];
@@ -773,7 +1240,10 @@ $(document).ready(function () {
         }
         prepareCodeContentField();
     }
-
+    /**
+     * 
+     * @param {any} 
+     */
     function prepareCodeContentField() {
         /*
         <div class="container">
@@ -837,6 +1307,11 @@ $(document).ready(function () {
     //-----------------------------------------
     //--------------GroupUnit------------------
     //-----------------------------------------
+    /**
+     * 
+     * @param {any} groupUnitId
+     * @param {any} parentId
+     */
     function createGroupUnitData(groupUnitId, parentId) {
         var groupUnitData = {
             0: {
@@ -939,12 +1414,19 @@ $(document).ready(function () {
 
         relationManager[groupUnitId] = groupUnitData;
     }
-
+    /**
+     * 
+     * @param {any} opGroupId
+     * @param {any} opGroupData
+     */
     function updateOpGroupData(opGroupId, opGroupData) {
         var groupUnitId = opGroupId.slice(0, -2);
         relationManager[groupUnitId][opGroupId.slice(-1)] = opGroupData;
     }
-
+    /**
+     * 
+     * @param {any} opGroupId
+     */
     function deleteOpGroupData(opGroupId) {
         var groupUnitId = opGroupId.slice(0, -2);
         var sub_num = opGroupId.slice(-1);
@@ -955,7 +1437,7 @@ $(document).ready(function () {
             var nodeArray = opGrData.childNode;
             var groupArray = opGrData.childGroup;
             var parentGroupUnit = opGrData.parent.slice(0, -2);
-            var parentSub_num = opGrData.parent.slice(-1);
+            var parentSub_num = Number(opGrData.parent.slice(-1));
             var parentOpGrData = relationManager[parentGroupUnit][parentSub_num];
             if (typeof parentOpGrData != 'undefined') {
                 var i = 0;
@@ -968,7 +1450,7 @@ $(document).ready(function () {
                 parentOpGrData.childNode.push.apply(parentOpGrData.childNode, nodeArray);
 
                 for (i = 0; i < groupArray.length; i++) {
-                    var childGroupUnit = relationManager[groupArray[i]];
+                    var childGroupUnit = relationManager[groupArray[i].slice(0, -2)];
                     if (typeof childGroupUnit != 'undefined') {
                         childGroupUnit["0"].parent = parentOpGrData.title;
                         childGroupUnit["0"].headNode.opGroup = parentOpGrData.title;
@@ -982,6 +1464,7 @@ $(document).ready(function () {
         }
 
         opGrData.isPainted = false;
+        removeOpGroupFromParentList(opGroupId);
 
         var removeAll = false;
         if (sub_num == "0" && relationManager[groupUnitId]["1"].isPainted == false) {
@@ -991,11 +1474,13 @@ $(document).ready(function () {
         }
 
         if (removeAll) {
-            removeGroupUnitFromParentList(groupUnitId);
             delete relationManager[groupUnitId];
         }
     }
-
+    /**
+     * 
+     * @param {any} nodeId
+     */
     function removeNodeFromParentList(nodeId) {
         var nodeData = nodeMap[nodeId];
         if (typeof nodeData == 'undefined') {
@@ -1015,6 +1500,31 @@ $(document).ready(function () {
         }
     }
 
+
+    /**
+     * 
+     * @param {any} opGroupId
+     */
+    function removeOpGroupFromParentList(opGroupId) {
+        var sub_num = 0;
+        var opGr = relationManager[opGroupId.slice(0, -2)][sub_num];
+        var parentOpGr = relationManager[opGr.parent.slice(0, -2)][opGr.parent.slice(-1)];
+
+        if (typeof parentOpGr == 'undefined') {
+            alert("[removeOpGroupFromParentList] Failed to find parent opGroup!");
+            return;
+        }
+        for (i = 0; i < parentOpGr.childGroup.length; i++) {
+            if (parentOpGr.childGroup[i] == opGroupId) {
+                parentOpGr.childGroup.splice(i, 1);
+            }
+        }
+    }
+
+    /**
+     * 
+     * @param {any} groupUnitId
+     */
     function removeGroupUnitFromParentList(groupUnitId) {
         var sub_num = 0;
         var opGr = relationManager[groupUnitId][sub_num];
@@ -1025,7 +1535,7 @@ $(document).ready(function () {
             return;
         }
         for (i = 0; i < parentOpGr.childGroup.length; i++) {
-            if (parentOpGr.childGroup[i] == groupUnitId) {
+            if (parentOpGr.childGroup[i] == (groupUnitId + '_0') || parentOpGr.childGroup[i] == (groupUnitId + '_1')) {
                 parentOpGr.childGroup.splice(i, 1);
             }
         }
@@ -1034,6 +1544,10 @@ $(document).ready(function () {
     //-----------------------------------------
     //---------------NodeUnit------------------
     //-----------------------------------------
+    /**
+     * 
+     * @param {any} nodeId
+     */
     function createNode(nodeId) {
         var nodeData = {
             top: 0,
@@ -1064,7 +1578,11 @@ $(document).ready(function () {
 
         nodeMap[nodeId] = nodeData;
     }
-
+    /**
+     * 
+     * @param {any} nodeId
+     * @param {any} opData
+     */
     function updateNodeData(nodeId, opData) {
         var nodeData = $.extend(true, {}, opData);
         if (nodeData.hasOwnProperty("internal")) {
@@ -1072,7 +1590,10 @@ $(document).ready(function () {
         }
         nodeMap[nodeId] = nodeData;
     }
-
+    /**
+     * 
+     * @param {any} nodeId
+     */
     function deleteNode(nodeId) {
         var nodeData = nodeMap[nodeId];
         if (typeof nodeData == 'undefined') {
@@ -1082,7 +1603,10 @@ $(document).ready(function () {
         removeNodeFromParentList(nodeId);
         delete nodeMap[nodeId];
     }
-    
+    /**
+     * 
+     * @param {any} 
+     */
     function loadGroupUnitOptions() {
         var parentGroupOptionsSelect = document.getElementById('showParentGroupOptions');
         var keyArray = Object.keys(relationManager);
@@ -1099,8 +1623,11 @@ $(document).ready(function () {
         }
     }
     
-
-    function appendNodeFromNewLine(nodeArray) {
+    /**
+     * 
+     * @param {any} nodeArray
+     */
+    function appendNodeFromNewLine(pLineNum, nodeArray) {
         for (let count = 0; count < nodeArray.length; count++) {
             createNode(nodeArray[count]);
             var sub_num = "0";
@@ -1108,9 +1635,12 @@ $(document).ready(function () {
         }
 
         addOperatorToFlowchartData(nodeArray);
-        addConstriantForInnerNode(nodeArray);
+        addConstriantForInnerNode(pLineNum, nodeArray);
     }
-
+    /**
+     * 
+     * @param {any} nodeArray
+     */
     function deleteNodeAlongWithProgramLine(nodeArray) {
         for (let i = 0; i < nodeArray.length; i++) {
             deleteNode(nodeArray[i]);
@@ -1121,7 +1651,13 @@ $(document).ready(function () {
 
     /*************************************************DEPENDENCY********************************************************/
     var dependencyManager = {};
-
+    /**
+     * 
+     * @param {any} startArg
+     * @param {any} endArg
+     * @param {any} val_0
+     * @param {any} val_1
+     */
     function createConstraintData(startArg, endArg, val_0, val_1) {
         return {
             fromOperator: startArg,
@@ -1132,37 +1668,65 @@ $(document).ready(function () {
             constraint1: val_1,
         };
     }
-
+    /**
+     * 
+     * @param {any} constraintId
+     * @param {any} constraintData
+     */
     function createConstraint(constraintId, constraintData) {
         dependencyManager[constraintId] = constraintData;
     }
-
+    /**
+     * 
+     * @param {any} constraintId
+     * @param {any} constraintData
+     */
     function updateConstraint(constraintId, constraintData) {
         if (constraintId in dependencyManager) {
             dependencyManager[constraintId] = constraintData;
         }
     }
-
+    /**
+     * 
+     * @param {any} constraintId
+     */
     function deleteConstraint(constraintId) {
         delete dependencyManager[constraintId];
     }
-    
-    function addConstriantForInnerNode(nodeArray) {
+    /**
+     * 
+     * @param {any} nodeArray
+     */
+    function addConstriantForInnerNode(pLineNum, nodeArray) {
         if (nodeArray.length < 2) {
             return;
         }
         var newConstraintArray = [];
+        var pLine = programManager[pLineNum];//get program line by id
+
+        var consObj = pLine.getConstraints();
 
         for (let count = 0; count < nodeArray.length - 1; count++) {
             var constraintId = nodeArray[count] + "_" + nodeArray[count + 1];
-            var constraintData = createConstraintData(nodeArray[count], nodeArray[count + 1], "0", "0");
+            var consKey = count + "-" + (count + 1);
+            var consValue = consObj[consKey];
+            var constraintData = {};
+
+            if (typeof consValue != 'undefined') {
+                constraintData = createConstraintData(nodeArray[count], nodeArray[count + 1], consValue["c1"], consValue["c2"]);
+            } else {
+                constraintData = createConstraintData(nodeArray[count], nodeArray[count + 1], "0", "0");
+            }
+             
             createConstraint(constraintId, constraintData);
             newConstraintArray.push(constraintId);
-
         }
         addLinkToFlowchartData(newConstraintArray);
     }
-
+    /**
+     * 
+     * @param {any} nodeArray
+     */
     function deleteConstraintAlongWithProgramLine(nodeArray) {
         var keyArray = Object.keys(dependencyManager);
 
@@ -1189,7 +1753,8 @@ $(document).ready(function () {
 
     var defaultFlowchartData = {
         operators: {},
-        links: {}
+        links: {},
+        opGroups: {}
     };
 
     var $flowchart = $('#flowchartworkspace');
@@ -1198,7 +1763,7 @@ $(document).ready(function () {
     $flowchart.flowchart({
         data: defaultFlowchartData,
         defaultSelectedLinkColor: '#3366ff',
-        linkWidth: 2,
+        linkWidth: 1,
         grid: 10,
         multipleLinksOnInput: true,
         multipleLinksOnOutput: true,
@@ -1229,6 +1794,23 @@ $(document).ready(function () {
         $flowchart.flowchart('setPositionRatio', panzoom.getScale());
     });
 
+    $('#find_operator_button').click(function () {
+        var opTitle = $('#find_operator_by_title').val();
+        if (opTitle == null) {
+            alert("Empty title");
+            return;
+        }
+        var key = null;
+        for (key in nodeMap) {
+            if (key == opTitle) {
+                var opData = nodeMap[key];
+                var currentPan = panzoom.getPan();
+                panzoom.pan(currentPan.x - opData.left, currentPan.y - opData.top, { relative: true });
+                return;
+            }
+        }
+        alert("Unknown node title: " + opTitle);
+    })
 
     //-----------------------------------------
     //--- operator and link properties
@@ -1251,10 +1833,19 @@ $(document).ready(function () {
     $flowchart.flowchart({
         onOperatorSelect: function (operatorId) {
             $opGroupProperties.hide();
+
+            if (!operatorId.startsWith("Op_")) {
+                $('#delete_selected').prop('disabled', false);
+            } else {
+                $('#delete_selected').prop('disabled', true);
+            }
+
             if (!(operatorId.startsWith("Op_") || operatorId in relationManager)) {
-                $operatorProperties.hide();
+                $operatorProperties.hide();   
                 return true;
             }
+
+            selectedComponent = { id: operatorId, type: "operator"};
             
             $operatorProperties.show();
             var operatorInfos = $flowchart.flowchart('getOperatorInfos', operatorId);
@@ -1272,7 +1863,7 @@ $(document).ready(function () {
                 $operatorProperties.hide();
                 return true;
             }
-            console.log(operationData);
+            //console.log(operationData);
             
             if (operationData.dont_touch == true) {
                 $('#dontTouchFalse').prop('checked', false);
@@ -1307,13 +1898,16 @@ $(document).ready(function () {
             }
 
             $('#operator_issue_slot').val(operationData.issue_slot);
-            $('#operator_rot').val(operationData.rot);
+            //$('#operator_rot').val(operationData.rot);
+            $('#operator_rot').val(JSON.stringify(operationData.rot, null, 2));
             $('#operator_scheduled_time').val(operationData.scheduled_time);
             $('#operator_shift_factor').val(operationData.shift_factor);
             return true;
         },
         onOperatorUnselect: function () {
+            selectedComponent = null;
             $operatorProperties.hide();
+            $('#delete_selected').prop('disabled', true);
             return true;
         },
         onOperatorMoved: function (operatorId, opData, destOpGrId) {
@@ -1358,9 +1952,6 @@ $(document).ready(function () {
             }
         },
         onOperatorDelete: function (operatorId) {
-            if (operatorId.startsWith("Op_")) {
-                deleteNode(operatorId);
-            }
             return true;
         },
     });
@@ -1413,16 +2004,16 @@ $(document).ready(function () {
             }
 
             operationData.issue_slot = $('#operator_issue_slot').val();
-            operationData.rot = $('#operator_rot').val();
+            operationData.rot = $('#operator_rot').val().json();
             operationData.scheduled_time = Number($('#operator_scheduled_time').val());
             operationData.shift_factor = Number($('#operator_shift_factor').val());
-
+            /*
             console.log(typeof operationData.is_bulk);
             console.log(typeof operationData.issue_slot);
             console.log(typeof operationData.rot);
             console.log(typeof operationData.scheduled_time);
             console.log(typeof operationData.shift_factor);
-
+            */
             alert("Operator properties are saved.");
         }
     });
@@ -1452,7 +2043,12 @@ $(document).ready(function () {
         },
         onLinkSelect: function (linkId) {
             $opGroupProperties.hide();
+
             if (linkId.startsWith("Op_")) {
+                $('#delete_selected').prop('disabled', false);
+
+                selectedComponent = { id: linkId, type: "link" };
+
                 $linkPropertiesStatic.show();
                 $linkPropertiesAdvanced.show()
                 var linkInfos = $flowchart.flowchart('getLinkInfos', linkId);
@@ -1462,10 +2058,10 @@ $(document).ready(function () {
                 $linkTo.val(linkInfos[2]);
 
                 $('#flexRadioPosINF0').prop('checked', false);
-                $('#flexRadioNegINF0').prop('checked', false);
+                //$('#flexRadioNegINF0').prop('checked', false);
                 $('#flexRadioNumber0').prop('checked', false);
                 $('#flexRadioPosINF1').prop('checked', false);
-                $('#flexRadioNegINF1').prop('checked', false);
+                //$('#flexRadioNegINF1').prop('checked', false);
                 $('#flexRadioNumber1').prop('checked', false);
                 $('#ConstraintInput0').val(0);
                 $('#ConstraintInput1').val(0);
@@ -1474,8 +2070,8 @@ $(document).ready(function () {
 
                 if (linkInfos[3] == "+INF") {
                     $('#flexRadioPosINF0').prop('checked', true);
-                } else if (linkInfos[3] == "-INF") {
-                    $('#flexRadioNegINF0').prop('checked', true);
+                /*} else if (linkInfos[3] == "-INF") {
+                    $('#flexRadioNegINF0').prop('checked', true);*/
                 } else {
                     $('#flexRadioNumber0').prop('checked', true);
                     $('#ConstraintInput0').val(linkInfos[3]);
@@ -1484,8 +2080,8 @@ $(document).ready(function () {
 
                 if (linkInfos[4] == "+INF") {
                     $('#flexRadioPosINF1').prop('checked', true);
-                } else if (linkInfos[4] == "-INF") {
-                    $('#flexRadioNegINF1').prop('checked', true);
+                /*} else if (linkInfos[4] == "-INF") {
+                    $('#flexRadioNegINF1').prop('checked', true);*/
                 } else {
                     $('#flexRadioNumber1').prop('checked', true);
                     $('#ConstraintInput1').val(linkInfos[4]);
@@ -1498,13 +2094,16 @@ $(document).ready(function () {
                 $linkColor.val(linkInfos[0]);
                 $linkFrom.val(linkInfos[1]);
                 $linkTo.val(linkInfos[2]);
+                $('#delete_selected').prop('disabled', true);
             }
 
             return true;
         },
         onLinkUnselect: function () {
+            selectedComponent = null;
             $linkPropertiesAdvanced.hide();
             $linkPropertiesStatic.hide();
+            $('#delete_selected').prop('disabled', true);
             return true;
         },
     });
@@ -1564,8 +2163,18 @@ $(document).ready(function () {
     //-----------------------------------------
     //--- opGroup properties
     //--- start
+
+    var $opGroupProperties = $('#opGroup_properties');
+    $opGroupProperties.hide();
+
+    var $opGroupTitle = $('#opGroup_title');
+    var $subGroup = document.getElementById('showSubgroupOptions');
+    var $opGroupParent = document.getElementById('showParentGroupOptions');
+    var $parentSubGroup = document.getElementById('showParentSubgroupOptions');
+
     $flowchart.flowchart({
         onOpGroupSelect: function (opGroupId) {
+            selectedComponent = { id: opGroupId, type: "opGroup" };
             $opGroupProperties.show();
             var infos = $flowchart.flowchart('getOpGroupInfos', opGroupId);
             var parentTitle = infos.parent.slice(0, -2);
@@ -1581,6 +2190,7 @@ $(document).ready(function () {
             return true;
         },
         onOpGroupUnselect: function () {
+            selectedComponent = null;
             $opGroupProperties.hide();
             clearOpGroupInfos();
             return true;
@@ -1590,14 +2200,6 @@ $(document).ready(function () {
             return true;
         },
     });
-
-    var $opGroupProperties = $('#opGroup_properties');
-    $opGroupProperties.hide();
-
-    var $opGroupTitle = $('#opGroup_title');
-    var $subGroup = document.getElementById('showSubgroupOptions');
-    var $opGroupParent = document.getElementById('showParentGroupOptions');
-    var $parentSubGroup = document.getElementById('showParentSubgroupOptions');
 
     $('#create_opGroup').click(function () {
         if ($opGroupProperties.is(":hidden")) {
@@ -1626,6 +2228,13 @@ $(document).ready(function () {
         clearOpGroupInfos();
     });
 
+    /**
+     * 
+     * @param {any} groupUnitId
+     * @param {any} sub_num
+     * @param {any} parentGroup
+     * @param {any} parentSub_num
+     */
     function createOpGroup(groupUnitId, sub_num, parentGroup, parentSub_num) {
         //"Op_xxxx" is reserved for node, cannot be used as group name
         if (groupUnitId.startsWith("Op_")) {
@@ -1645,7 +2254,7 @@ $(document).ready(function () {
         } else if (groupUnitId != "ROOT" && !relationManager[parentGroup][parentSub_num].isPainted) {//check if parent exists
             alert("Invalid parent group " + parentGroup + "_" + parentSub_num + " !");
             return;
-        } else {//GroupX_1's parent group is set here when GroupX_0 is created
+        } else {//Note: GroupX_1's parent group is set here when GroupX_0 is created
             createGroupUnitData(groupUnitId, parentGroup + "_" + parentSub_num);
             if (groupUnitId != "ROOT") {
                 relationManager[parentGroup][parentSub_num].childGroup.push(groupUnitId);
@@ -1659,6 +2268,23 @@ $(document).ready(function () {
         loadGroupUnitOptions();
     }
 
+    function restoreOpGroup(groupUnitId, sub_num, opGroupData) {
+        if (groupUnitId == 'ROOT' && sub_num == '0') {
+            $flowchart.flowchart('updateOpGroupGeometric', opGroupData.title, opGroupData);
+        } else {
+            if (opGroupData == null) {
+                opGroupData = relationManager[groupUnitId][sub_num];
+            }
+            $flowchart.flowchart('createOpGroup', opGroupData.title, opGroupData, true);
+        }
+        loadGroupUnitOptions();
+    }
+
+
+    /**
+     * 
+     * @param {any} 
+     */
     function clearOpGroupInfos() {
         $opGroupTitle.val('');
         $subGroup.selectedIndex = 0;
@@ -1679,7 +2305,10 @@ $(document).ready(function () {
     //--- end
     //--- delete operator / link / group button
     //-----------------------------------------
-
+    /**
+     * 
+     * @param {any} 
+     */
     function formatConstraintsForJSON() {
         var constraints = {};
         var keyArray = Object.keys(dependencyManager);
@@ -1689,15 +2318,18 @@ $(document).ready(function () {
             constraints[keyArray[i]] = {
                 d_hi: constraintData.constraint0,
                 d_lo: constraintData.constraint1,
-                dest: constraintData.fromOperator,
+                dest: constraintData.toOperator,
                 dest_hook: 0,
-                src: constraintData.toOperator,
+                src: constraintData.fromOperator,
                 src_hook: 0,
             };
         }
         return constraints;
     }
-
+    /**
+     * 
+     * @param {any} 
+     */
     function formatInstructionsForJSON() {
         var instructions = {};
         for (let r = 0; r < cellArray.length; r++) {
@@ -1716,7 +2348,10 @@ $(document).ready(function () {
 
         return instructions;
     }
-
+    /**
+     * 
+     * @param {any} 
+     */
     function formatProgramLineForJSON() {
         var programList = [];
         var keyArray = Object.keys(programManager);
@@ -1724,31 +2359,45 @@ $(document).ready(function () {
             var pLine = programManager[keyArray[i]];
             if (pLine instanceof programLine) {
                 var instructionInfo = {
-                    id: pLine.getId(),
-                    immediate: 0,
+                    id: pLine.getLineNum(),
+                    immediate: pLine.getImmediate(),
                     name: pLine.getName(),
                     segment_values: pLine.getFullOptionsObject(),
-                    segment_values_str: null,
-                    timelabels: [[4, ""], [3, ""], [2, ""], [1, ""], [0, ""]],
-                    timestamps: [[4, -1], [3, -1], [2, -1], [1, -1], [0, -1]],
+                    segment_values_str: pLine.getSegmentValuesStr(),
+                    timelabels: pLine.getTimelabels(),
+                    timestamps: pLine.getTimestamps(),
                 };
                 programList.push(instructionInfo);
             }
         }
         return programList;
     }
-
+    /**
+     * 
+     * @param {any} 
+     */
     function formatOperationsForJSON() {
         var operations = {};
         var keyArray = Object.keys(relationManager);
         for (let i = 0; i < keyArray.length; i++) {
             var groupUnitId = keyArray[i];
             var groupUnitData = relationManager[groupUnitId];
-            var childArr0 = groupUnitData["0"].childGroup.concat(groupUnitData["0"].childNode);
+            var childArr0 = groupUnitData["0"].childNode;
+            let idx = 0;
+            for (; idx < childArr0.length; idx++) {
+                if (childArr0[idx] == (groupUnitId + '_0')) {
+                    childArr0.splice(idx, 1);
+                }
+            }
             if (childArr0.length == 0) {
                 childArr0 = null;
             }
-            var childArr1 = groupUnitData["1"].childGroup.concat(groupUnitData["1"].childNode);
+            var childArr1 = groupUnitData["1"].childNode;
+            for (idx = 0; idx < childArr1.length; idx++) {
+                if (childArr1[idx] == (groupUnitId + '_1')) {
+                    childArr1.splice(idx, 1);
+                }
+            }
             if (childArr1.length == 0) {
                 childArr1 = null;
             }
@@ -1794,6 +2443,10 @@ $(document).ready(function () {
     //-----------------------------------------
     //--- save and load
     //--- start
+    /**
+     * 
+     * @param {any} 
+     */
     function generateJSON() {
         //var instructions = formatInstructionsForJSON();
         var data = {
@@ -1809,7 +2462,7 @@ $(document).ready(function () {
             operations: formatOperationsForJSON(),
             flowchart: $flowchart.flowchart('getData'),
         };
-        $('#flowchart_data').val(JSON.stringify(data, function (k, v) {
+        var output = JSON.stringify(data, function (k, v) {
             if (v instanceof Array) {//keep array in one line except that it contains object
                 for (let i = 0; i < v.length; i++) {
                     if (v[i] === Object(v[i])) {
@@ -1823,27 +2476,37 @@ $(document).ready(function () {
             .replace(/\"\[/g, '[')
             .replace(/\]\"/g, ']')
             .replace(/\"\{/g, '{')
-            .replace(/\}\"/g, '}'));
-
+            .replace(/\}\"/g, '}');
         const downloadLink = document.querySelector("a.dynamic");
-        downloadLink.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent($('#flowchart_data').val()));
-        downloadLink.setAttribute('download', 'descriptor_test.json')
-
+        downloadLink.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(output));
+        downloadLink.setAttribute('download', 'descriptor_test.json');
     }
     $('#get_json').click(generateJSON);
 
+    /**
+     * 
+     * @param {any} 
+     */
     function Flow2Text() {
         var data = $flowchart.flowchart('getData');
         $('#flowchart_data').val(JSON.stringify(data, null, 2));
     }
     $('#get_data').click(Flow2Text);
 
+    /**
+     * 
+     * @param {any} 
+     */
     function Text2Flow() {
         var data = JSON.parse($('#flowchart_data').val());
         $flowchart.flowchart('setData', data);
     }
     $('#set_data').click(Text2Flow);
 
+    /**
+     * 
+     * @param {any} 
+     */
     /*global localStorage*/
     function SaveToLocalStorage() {
         if (typeof localStorage !== 'object') {
@@ -1855,6 +2518,10 @@ $(document).ready(function () {
     }
     $('#save_local').click(SaveToLocalStorage);
 
+    /**
+     * 
+     * @param {any} 
+     */
     function LoadFromLocalStorage() {
         if (typeof localStorage !== 'object') {
             alert('local storage not available');
@@ -1874,6 +2541,10 @@ $(document).ready(function () {
     //--- save and load
     //-----------------------------------------
 
+    /**
+     * 
+     * @param {any} constraintArray
+     */
     function addLinkToFlowchartData(constraintArray) {
         for (let count = 0; count < constraintArray.length; count++) {
             var newLinkId = constraintArray[count];
@@ -1881,15 +2552,21 @@ $(document).ready(function () {
             $('#flowchartworkspace').flowchart('createLink', newLinkId, newLinkData);
         }
     }
-
+    /**
+     * 
+     * @param {any} nodeArray
+     */
     function addOperatorToFlowchartData(nodeArray) {
         for (let count = 0; count < nodeArray.length; count++) {
             var newOperatorData = nodeMap[nodeArray[count]];
 
-            $('#flowchartworkspace').flowchart('createOperator', newOperatorData.properties.title, newOperatorData);
+            $('#flowchartworkspace').flowchart('createOperator', newOperatorData.properties.title, newOperatorData, false);
         }
     }
-
+    /**
+     * 
+     * @param {any} nodeArray
+     */
     function deleteOperatorFromFlowchart(nodeArray) {
         //user case: new link on a node
         for (let count = 0; count < nodeArray.length; count++) {
@@ -1897,6 +2574,11 @@ $(document).ready(function () {
         }
     }
     /*************************Test program. Use random number generator to select the index of instruction**************************/
+
+    /**
+     * 
+     * @param {any} length
+     */
     function generateRandomProgram(length) {
         for (var count = 0; count < length; count++) {
             var index = Math.floor(Math.random() * Object.keys(instructionMap).length) + 1;
@@ -1909,13 +2591,11 @@ $(document).ready(function () {
         }
     }
 
-    //function handleRunTestProgram()
     $('#buttonRunTest').click(function () {
         var programLength = 5;
         generateRandomProgram(programLength);
     });
 
-    //function clearTestProgram()
     $('#buttonRunTest').dblclick(function () {
         if (confirm('Delete all program?')) {
             refreshHomepage(false);
@@ -1924,85 +2604,3 @@ $(document).ready(function () {
     /************************************************End**********************************************************/
 
 });
-
-/*For testing purpose, to check if load correct json file (isa_v1.json) by displaying its content*/
-/*
-function showInstruction() {
-    var jsonObj = jsonSchema;
-    var pPlatform = document.createElement('p');
-    var pInstrBitwidth = document.createElement('p');
-    var pInstrCodeBitwidth = document.createElement('p');
-    var pBlockStartL1 = document.createElement('p');
-    var pBlockEndL1 = document.createElement('p');
-    var instructionList;
-
-
-    pPlatform.innerHTML = "<pre>  &quot;platform&quot;: " + jsonObj.platform + "</pre>";
-    pInstrBitwidth.innerHTML = "<pre>  &quot;instr_bitwidth&quot;: " + jsonObj.instr_bitwidth + "</pre>";
-    pInstrCodeBitwidth.innerHTML = "<pre>  &quot;instr_code_bitwidth&quot;: " + jsonObj.instr_code_bitwidth + "</pre>";
-    pBlockStartL1.innerHTML = "<span><br/>{</span>";
-
-    schemaDiv.appendChild(pBlockStartL1);
-    schemaDiv.appendChild(pPlatform);
-    schemaDiv.appendChild(pInstrBitwidth);
-    schemaDiv.appendChild(pInstrCodeBitwidth);
-    instructionList = jsonObj.instruction_templates;
-
-    //console.log(typeof instructionList);
-
-    for (let i in instructionList) {
-        var pBlockStartL2 = document.createElement('p');
-        var pBlockEndL2 = document.createElement('p');
-        var pInsCode = document.createElement('p');
-        var pInsName = document.createElement('p');
-        var pInsPhase = document.createElement('p');
-        var pInsMaxChunk = document.createElement('p');
-        var divInstructionItem = document.createElement('div');
-        var segmentList;
-
-        //console.log("ins: " + i);
-        pBlockStartL2.innerHTML = "<pre><span>  [</span></pre>";
-        pInsCode.innerHTML = "<pre>    &quot;code&quot;: " + instructionList[i].code + "</pre>";
-        pInsName.innerHTML = "<pre>    &quot;name&quot;: " + instructionList[i].name + "</pre>";
-        pInsPhase.innerHTML = "<pre>    &quot;phase&quot;: " + instructionList[i].phase + "</pre>";
-        pInsMaxChunk.innerHTML = "<pre>    &quot;max_chunk&quot;: " + instructionList[i].max_chunk + "</pre>";
-
-        divInstructionItem.appendChild(pBlockStartL2);
-        divInstructionItem.appendChild(pInsCode);
-        divInstructionItem.appendChild(pInsName);
-        divInstructionItem.appendChild(pInsPhase);
-        divInstructionItem.appendChild(pInsMaxChunk);
-
-        segmentList = instructionList[i].segment_templates;
-
-        for (let j in segmentList) {
-            var pBlockStartL3 = document.createElement('p');
-            var pBlockEndL3 = document.createElement('p');
-            var pSegId = document.createElement('p');
-            var pSegName = document.createElement('p');
-            var pSegBitwidth = document.createElement('p');
-            var divSegmentItem = document.createElement('div');
-
-            //console.log("seg: " + j);
-            pBlockStartL3.innerHTML = "<pre><span>    {</span></pre>";
-            pSegId.innerHTML = "<pre>      &quot;id&quot;: " + segmentList[j].id + "</pre>";
-            pSegName.innerHTML = "<pre>      &quot;name&quot;: " + segmentList[j].name + "</pre>";
-            pSegBitwidth.innerHTML = "<pre>      &quot;bitwidth&quot;: " + segmentList[j].bitwidth + "</pre>";
-
-            divSegmentItem.appendChild(pBlockStartL3);
-            divSegmentItem.appendChild(pSegId);
-            divSegmentItem.appendChild(pSegName);
-            divSegmentItem.appendChild(pSegBitwidth);
-
-            pBlockEndL3.innerHTML = "<pre><span>    }</span></pre>";
-            divSegmentItem.appendChild(pBlockEndL3);
-            divInstructionItem.appendChild(divSegmentItem);
-        }
-        pBlockEndL2.innerHTML = "<pre><span>  ]</span></pre>";
-        divInstructionItem.appendChild(pBlockEndL2)
-        schemaDiv.appendChild(divInstructionItem);
-    }
-    pBlockEndL1.innerHTML = "<span>}</span>";
-    schemaDiv.appendChild(pBlockEndL1);
-}
-*/

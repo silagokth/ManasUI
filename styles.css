@@ -19,9 +19,10 @@
     margin: 5px 0 5px 0;
 }
 
-.border-secondary {
+#editableFields {
     border: 1px solid;
-    border-radius: 3px;
+    border-color: lightgrey;
+    border-radius: 3px 3px;
 }
 
 #programFields {
@@ -30,6 +31,7 @@
     width: inherit;
     height: 700px;
     border: 1px solid;
+    border-radius: 5px 5px;
 }
 
 #programFields::-webkit-scrollbar {
@@ -43,8 +45,9 @@
     width: inherit;
     max-height: 700px;
     border: 1px solid;
+    border-color: lightgrey;
     background: repeating-linear-gradient(45deg, rgb(238, 238, 238), rgb(238, 238, 238) 10px, rgb(229, 229, 229) 10px, rgb(229, 229, 229) 20px);
-
+    border-radius: 3px 3px;
 }
 
 #flowchartworkspace {
@@ -84,6 +87,7 @@
 
 .input-output-field {
     margin-top: 10px;
+    width: 65%;
 }
 
 .output-data-container {
@@ -124,7 +128,9 @@
     -ms-overflow-style: none; /* IE and Edge */
     width: inherit;
     height: 700px;
-    border: 1px solid
+    border: 1px solid;
+    border-color: lightgrey;
+    border-radius: 3px 3px;
 }
 
 #cellUnitContainer::-webkit-scrollbar {

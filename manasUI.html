@@ -44,26 +44,15 @@
                         </li>
                         <!--
                         <li>
-                            <a href="manasUI.html" class="nav-link text-white">
-                                Name
+                            <a href="graph.html" class="nav-link text-white">
+                                Graph
                             </a>
-                        </li>
-                        
-                        <li>
-                            <input class="form-control-sm bg-dark mt-1" type="file" id="inputFiles" />
                         </li>
                         -->
                     </ul>
                 </div>
             </div>
         </div>
-        <!--
-        <div class="px-3 py-0 border-bottom mb-1">
-            <div class="container d-flex flex-wrap justify-content-center">
-                <input class="form-control-sm" type="file" id="inputFiles" />
-            </div>
-        </div>
-        -->
     </header>
 
     <section id="consoles">
@@ -75,14 +64,20 @@
                         </div>
                     </div>
                     <div class="flowchart-buttons-1">
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="zoom_ori">100%</button>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="zoom_in">+</button>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="zoom_out">-</button>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="create_opGroup">
-                            Create group
-                        </button>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="delete_selected">Delete operator / link / group</button>
-
+                        <button class="btn btn-secondary btn-sm" type="button" id="zoom_ori">100%</button>
+                        <button class="btn btn-secondary btn-sm" type="button" id="zoom_in">+</button>
+                        <button class="btn btn-secondary btn-sm" type="button" id="zoom_out">-</button>
+                        <button class="btn btn-secondary btn-sm" type="button" id="create_opGroup">Create group</button>
+                        <button class="btn btn-secondary btn-sm" type="button" id="delete_selected" disabled>Delete component</button>
+                        <!--
+                        <div class="input-group my-2 input-group-sm" style="width:30%">
+                            <div class="input-group-prepend">
+                                <label for="find_operator_by_title" class="input-group-text">Find operator by title: </label>
+                            </div>
+                            <input type="text" class="form-control" id="find_operator_by_title">
+                            <button class="btn btn-secondary btn-sm" type="button" id="find_operator_button">Find</button>
+                        </div>
+                        -->
                         <div id="operator_properties">
                             <div class="input-group my-2 input-group-sm">
                                 <div class="input-group-prepend">
@@ -236,12 +231,14 @@
                                         +INF
                                     </label>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="flexRadioConstraint0" id="flexRadioNegINF0" value="-INF">
-                                    <label class="form-check-label" for="flexRadioNegINF0">
-                                        -INF
-                                    </label>
-                                </div>
+                                <!--
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="flexRadioConstraint0" id="flexRadioNegINF0" value="-INF">
+                <label class="form-check-label" for="flexRadioNegINF0">
+                    -INF
+                </label>
+            </div>
+            -->
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="flexRadioConstraint0" id="flexRadioNumber0" value="Number" checked>
                                     <label class="form-check-label" for="flexRadioNumber0">
@@ -260,12 +257,14 @@
                                         +INF
                                     </label>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="flexRadioConstraint1" id="flexRadioNegINF1" value="-INF">
-                                    <label class="form-check-label" for="flexRadioNegINF1">
-                                        -INF
-                                    </label>
-                                </div>
+                                <!--
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="flexRadioConstraint1" id="flexRadioNegINF1" value="-INF">
+                <label class="form-check-label" for="flexRadioNegINF1">
+                    -INF
+                </label>
+            </div>
+            -->
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="flexRadioConstraint1" id="flexRadioNumber1" value="Number" checked>
                                     <label class="form-check-label" for="flexRadioNumber1">
@@ -313,25 +312,29 @@
                             </div>
                         </div>
                     </div>
-                    <div class="flowchart-buttons-2">
-                        <button class="btn btn-outline-secondary btn-sm" id="get_json">Get JSON</button>
-                        <button class="btn btn-outline-secondary btn-sm" id="get_data">Get data</button>
-                        <button class="btn btn-outline-secondary btn-sm" id="set_data">Set data</button>
-                        <button class="btn btn-outline-secondary btn-sm" id="save_local">Save to local storage</button>
-                        <button class="btn btn-outline-secondary btn-sm" id="load_local">Load from local storage</button>
-                    </div>
                     <div class="input-output-field">
                         <div class="input-group my-2 input-group-sm">
                             <div class="input-group-prepend">
-                                <label class="input-group-text">&nbsp;&nbsp;&nbsp;Input isa&nbsp;&nbsp;&nbsp;</label>
+                                <span class="input-group-text">Load</span>
                             </div>
-                            <input class="form-control-sm" type="file" id="inputFiles"/>
+                            <div class="custom-file input-sm">
+                                <input type="file" class="custom-file-input" id="inputFiles">
+                                <label class="custom-file-label" for="inputFiles">Choose file</label>
+                            </div>
+                        </div>
+                        <div class="flowchart-buttons-2">
+                            <button class="btn btn-secondary btn-sm" id="get_json">Get JSON</button>
+                            <button class="btn btn-secondary btn-sm" id="get_data">Get data</button>
+                            <button class="btn btn-secondary btn-sm" id="set_data">Set data</button>
+                            <!--
+                                <button class="btn btn-outline-secondary btn-sm" id="save_local">Save to local storage</button>
+                                <button class="btn btn-outline-secondary btn-sm" id="load_local">Load from local storage</button>
+                             -->
                         </div>
                         <div class="output-data-container input-group my-2 input-group-sm">
                             <div class="input-group-prepend">
-                                <a class="dynamic input-group-text">Output data<br>(Download)</a>
+                                <a class="dynamic input-group-text">Save ("Get JSON" before download)</a>
                             </div>
-                            <textarea id="flowchart_data"></textarea>
                         </div>
                     </div>
                 </div>
@@ -358,14 +361,14 @@
                     </div>
 
                     <div id="instrEditField">
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonEdit" data-toggle="collapse" data-target="#editableFields" aria-expanded="false" aria-controls="editableFields">
+                        <button class="btn btn-secondary btn-sm" type="button" id="buttonEdit" data-toggle="collapse" data-target="#editableFields" aria-expanded="false" aria-controls="editableFields">
                             EDIT
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonInsert">INSERT</button>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonModify">MODIFY</button>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonDelete">DELETE</button>
-                        <button class="btn btn-outline-secondary btn-sm" type="button" id="buttonRunTest">RUN TEST</button>
-                        <div class="collapse border-secondary" id="editableFields">
+                        <button class="btn btn-secondary btn-sm" type="button" id="buttonInsert">INSERT</button>
+                        <button class="btn btn-secondary btn-sm" type="button" id="buttonModify">MODIFY</button>
+                        <button class="btn btn-secondary btn-sm" type="button" id="buttonDelete">DELETE</button>
+                        <button class="btn btn-secondary btn-sm" type="button" id="buttonRunTest">RUN TEST</button>
+                        <div class="collapse" id="editableFields">
                         </div>
                     </div>
                 </div>
@@ -373,17 +376,9 @@
         </div>
     </section>
 
-    <section>
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-md-6">
-                    <div id="schema"></div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     <script src="jquery.flowchart.js"></script>
-    <script type="text/javascript" src="myscript.js"></script>
+    <script src="jquery.timingConstraints.js"></script>
+    <script type="text/javascript" src="./myscript.js"></script>
+
 </body>
 </html>

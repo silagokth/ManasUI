@@ -9,8 +9,8 @@ if (!('remove' in Element.prototype)) {
 }
 
 jQuery(function ($) {
-// the widget definition, where "custom" is the namespace,
-// "colorize" the widget name
+// the widget definition, where the first "flowchart" is the namespace,
+// the second "flowchart" is the widget name
     $.widget("flowchart.flowchart", {
         // default options
         options: {
@@ -20,15 +20,15 @@ jQuery(function ($) {
             distanceFromArrow: 3,
             defaultOperatorClass: 'flowchart-default-operator',
 
-			// RGT
+            // RGT
             linksLayerClass: 'flowchart-links-layer',
             operatorsLayerClass: 'flowchart-operators-layer',
             opGroupsLayerClass: 'flowchart-opGroups-layer',
 
-			readOnly: false,
-			// ---------------------------------------------------
+            readOnly: false,
+            // ---------------------------------------------------
 
-			defaultLinkColor: '#000000',
+            defaultLinkColor: '#000000',
             defaultSelectedLinkColor: '#3366ff',
             defaultOpGroupColor: 'black',
             //defaultSelectedOpGroupColor: '#3366ff',
@@ -99,11 +99,11 @@ jQuery(function ($) {
         selectedOpGroupId: null,
         positionRatio: 1,
         globalId: null,
-		
-		// ---------------------------------------------------
-		// RGT
-		selectedOperators: [],
-		// ---------------------------------------------------
+
+        // ---------------------------------------------------
+        // RGT
+        selectedOperators: [],
+        // ---------------------------------------------------
 
         // the constructor
         _create: function () {
@@ -121,28 +121,28 @@ jQuery(function ($) {
                 this.element.addClass('flowchart-vertical');
             }
 
-			this.canvas = this.element;
+            this.canvas = this.element;
 
             this.objs.layers.links = $('<svg id="linksLayer" class="flowchart-links-layer"></svg>');
-			// ---------------------------------------------------
-			// RGT
-			this.objs.layers.links.addClass(this.options.linksLayerClass);
-			// ---------------------------------------------------
-			this.objs.layers.links.appendTo(this.element);
+            // ---------------------------------------------------
+            // RGT
+            this.objs.layers.links.addClass(this.options.linksLayerClass);
+            // ---------------------------------------------------
+            this.objs.layers.links.appendTo(this.element);
 
             this.objs.layers.operators = $('<div id="operatorsLayer" class="flowchart-operators-layer unselectable"></div>');
-			// ---------------------------------------------------
-			// RGT
-			this.objs.layers.operators.addClass(this.options.operatorsLayerClass);
-			// ---------------------------------------------------
+            // ---------------------------------------------------
+            // RGT
+            this.objs.layers.operators.addClass(this.options.operatorsLayerClass);
+            // ---------------------------------------------------
             this.objs.layers.operators.appendTo(this.element);
 
             this.objs.layers.temporaryLink = $('<svg class="flowchart-temporary-link-layer"></svg>');
-			// ---------------------------------------------------
-			// RGT
-			this.objs.layers.temporaryLink.addClass(this.options.linksLayerClass);
             // ---------------------------------------------------
-			this.objs.layers.temporaryLink.appendTo(this.element);
+            // RGT
+            this.objs.layers.temporaryLink.addClass(this.options.linksLayerClass);
+            // ---------------------------------------------------
+            this.objs.layers.temporaryLink.appendTo(this.element);
 
             var shape = document.createElementNS("http://www.w3.org/2000/svg", "line");
             shape.setAttribute("x1", "0");
@@ -155,8 +155,7 @@ jQuery(function ($) {
             shape.setAttribute("fill", "none");
             this.objs.layers.temporaryLink[0].appendChild(shape);
             this.objs.temporaryLink = shape;
-
-            //this.objs.layers.opGroups = $('<svg id="opGroupsLayer" class="flowchart-opGroups-layer"></svg>');
+            
             this.objs.layers.opGroups = $('<div id="opGroupsLayer" class="flowchart-opGroups-layer unselectable"></div>');
             this.objs.layers.opGroups.addClass(this.options.opGroupsLayerClass);
             this.objs.layers.opGroups.appendTo(this.element);
@@ -202,14 +201,14 @@ jQuery(function ($) {
                 self._click((e.pageX - offset.left) / self.positionRatio, (e.pageY - offset.top) / self.positionRatio, e);
             });
 
-			// RGT
+            // RGT
             this.element.on('scroll', function (e) {
                 self.redrawLinksLayer();
             });
-			// ---------------------------------------------------
+            // ---------------------------------------------------
 
             this.objs.layers.operators.on('pointerdown mousedown touchstart', '.flowchart-operator', function (e) {
-               e.stopImmediatePropagation();
+                e.stopImmediatePropagation();
             });
 
             this.objs.layers.operators.on('mouseover', '.flowchart-operator', function (e) {
@@ -241,14 +240,14 @@ jQuery(function ($) {
                 self._connecterMouseOver($(this).data('link_id'));
             });
 
-			this.objs.layers.links.on('mouseout', '.flowchart-link', function () {
+            this.objs.layers.links.on('mouseout', '.flowchart-link', function () {
                 self._connecterMouseOut($(this).data('link_id'));
             });
 
-			this.objs.layers.links.on('click', '.flowchart-link', function () {
+            this.objs.layers.links.on('click', '.flowchart-link', function () {
                 self.selectLink($(this).data('link_id'));
             });
-                        
+
             this.objs.layers.opGroups.on('mouseover', '.flowchart-opGroup', function () {
                 self._opGroupMouseOver($(this).data('opGroup_id'));
             });
@@ -260,7 +259,7 @@ jQuery(function ($) {
             this.objs.layers.opGroups.on('click', '.flowchart-opGroup', function () {
                 self.selectOpGroup($(this).data('opGroup_id'));
             });
-            
+
         },
 
         setData: function (data) {
@@ -275,13 +274,13 @@ jQuery(function ($) {
             this.data.opGroups = {};
             for (var opGroupId in data.opGroups) {
                 if (data.opGroups.hasOwnProperty(opGroupId)) {
-                    this.createOpGroup(opGroupId, data.opGroups[opGroupId]);
+                    this.createOpGroup(opGroupId, data.opGroups[opGroupId], true);
                 }
             }
             this.data.operators = {};
             for (var operatorId in data.operators) {
                 if (data.operators.hasOwnProperty(operatorId)) {
-                    this.createOperator(operatorId, data.operators[operatorId]);
+                    this.createOperator(operatorId, data.operators[operatorId], true);
                 }
             }
             this.data.links = {};
@@ -293,34 +292,34 @@ jQuery(function ($) {
             this.redrawLinksLayer();
         },
 
-		// ---------------------------------------------------
-		// RGT
-		clearCanvas: function () {
+        // ---------------------------------------------------
+        // RGT
+        clearCanvas: function () {
             this._clearOperatorsLayer();
-			this._clearLinksLayer();
+            this._clearLinksLayer();
             this.data.operatorTypes = {};
             this.data.links = {};
             this.data.operators = {};
             this.redrawLinksLayer();
-			// Scroll to the top and left...
-			this.canvas.scrollTop(0);
-			this.canvas.scrollLeft(0);
-			this.options.readOnly = false;
-		},
+            // Scroll to the top and left...
+            this.canvas.scrollTop(0);
+            this.canvas.scrollLeft(0);
+            this.options.readOnly = false;
+        },
 
-		setToReadOnly: function (value) {
-			this.options.readOnly = value;
-			this.options.canUserEditLinks = !value;
-		},
+        setToReadOnly: function (value) {
+            this.options.readOnly = value;
+            this.options.canUserEditLinks = !value;
+        },
 
-		getReadOnly: function () {
-			return this.options.readOnly;
-		},
+        getReadOnly: function () {
+            return this.options.readOnly;
+        },
 
-		setSelectedOperators: function (selectedOperators) {
-			this.selectedOperators = selectedOperators;
-		},
-		// ---------------------------------------------------
+        setSelectedOperators: function (selectedOperators) {
+            this.selectedOperators = selectedOperators;
+        },
+        // ---------------------------------------------------
 
         addLink: function (linkData) {
             while (typeof this.data.links[this.linkNum] != 'undefined') {
@@ -387,8 +386,7 @@ jQuery(function ($) {
             for (var linkId in this.data.links) {
                 if (this.data.links.hasOwnProperty(linkId)) {
                     var linkData = this.data.links[linkId];
-                    if (linkData.fromOperator == operatorId || linkData.toOperator == operatorId)
-                    {
+                    if (linkData.fromOperator == operatorId || linkData.toOperator == operatorId) {
                         var subConnectors = this._getSubConnectors(linkData);
                         var fromSubConnector = subConnectors[0];
                         var toSubConnector = subConnectors[1];
@@ -436,7 +434,7 @@ jQuery(function ($) {
             var width = parseInt($connector.css('border-top-width'), 10);
             var y = (connectorOffset.top - elementOffset.top - 1) / this.positionRatio + parseInt($connector.css('border-left-width'), 10);
 
-            return {x: x, width: width, y: y};
+            return { x: x, width: width, y: y };
         },
 
         getLinkInfos: function (linkId) {
@@ -585,14 +583,14 @@ jQuery(function ($) {
             var fromPosition = this.getConnectorPosition(linkData.fromOperator, linkData.fromConnector, fromSubConnector);
             var toPosition = this.getConnectorPosition(linkData.toOperator, linkData.toConnector, toSubConnector);
 
-			// RGT
-			var xScroll = this.canvas.scrollLeft() / this.positionRatio;
-			fromPosition.x += xScroll;
-			toPosition.x += xScroll;
-			var yScroll = this.canvas.scrollTop() / this.positionRatio;
-			fromPosition.y += yScroll;
-			toPosition.y += yScroll;
-			// ---------------------------------------------------
+            // RGT
+            var xScroll = this.canvas.scrollLeft() / this.positionRatio;
+            fromPosition.x += xScroll;
+            toPosition.x += xScroll;
+            var yScroll = this.canvas.scrollTop() / this.positionRatio;
+            fromPosition.y += yScroll;
+            toPosition.y += yScroll;
+            // ---------------------------------------------------
 
             var fromX = fromPosition.x;
             var offsetFromX = fromPosition.width;
@@ -638,7 +636,7 @@ jQuery(function ($) {
             }
 
             linkData.internal.els.rect.setAttribute("y", fromY - this.options.linkWidth / 2);
-			linkData.internal.els.rect.setAttribute("width", offsetFromX + distanceFromArrow + 1);
+            linkData.internal.els.rect.setAttribute("width", offsetFromX + distanceFromArrow + 1);
             linkData.internal.els.rect.setAttribute("height", this.options.linkWidth);
         },
 
@@ -675,6 +673,7 @@ jQuery(function ($) {
 
             var $operator = $('<div class="flowchart-operator"></div>');
             $operator.addClass(infos.class);
+            $operator.attr('title', infos.title);//add tooltips
 
             var $operator_title = $('<div class="flowchart-operator-title"></div>');
             $operator_title.html(infos.title);
@@ -789,11 +788,11 @@ jQuery(function ($) {
                 this.operatorNum++;
             }
 
-            this.createOperator(this.operatorNum, operatorData);
+            this.createOperator(this.operatorNum, operatorData, false);
             return this.operatorNum;
         },
 
-        
+
         resizeCanvas: function () {
             var mostBottomOperatorTop = 0;
             var mostRightOperatorLeft = 0;
@@ -857,7 +856,7 @@ jQuery(function ($) {
             }
         },
 
-        createOperator: function (operatorId, operatorDataOriginal) {
+        createOperator: function (operatorId, operatorDataOriginal, isRestore) {
             var operatorData = $.extend(true, {}, operatorDataOriginal);
             operatorData.internal = {};
             this._refreshInternalProperties(operatorData);
@@ -885,7 +884,7 @@ jQuery(function ($) {
                 parentOpGroup.childNode.push(operatorId);
             }
 
-            if (operatorData.properties.title.startsWith("Op_")) {
+            if (operatorData.properties.title.startsWith("Op_") && !isRestore) {
                 var opGroupTop = parseInt(parentOpGroup.internal.els.rect.css('top'));
                 var opGroupLeft = parseInt(parentOpGroup.internal.els.rect.css('left'));
                 operatorData.top = opGroupTop + 100;
@@ -898,22 +897,23 @@ jQuery(function ($) {
                 operatorData.top = Math.round(operatorData.top / grid) * grid;
                 operatorData.left = Math.round(operatorData.left / grid) * grid;
             }
-			// ---------------------------------------------------
-			// RGT
-			var xScroll = this.element.scrollLeft() / this.positionRatio;
-			var yScroll = this.element.scrollTop() / this.positionRatio;
-			operatorData.left += xScroll;
-			operatorData.top += yScroll;
-			// ---------------------------------------------------
-			fullElement.operator.appendTo(this.objs.layers.operators);
-            fullElement.operator.css({top: operatorData.top, left: operatorData.left});
+
+            if (!isRestore) {
+                var xScroll = this.element.scrollLeft() / this.positionRatio;
+                var yScroll = this.element.scrollTop() / this.positionRatio;
+                operatorData.left += xScroll;
+                operatorData.top += yScroll;
+            }
+
+            fullElement.operator.appendTo(this.objs.layers.operators);
+            fullElement.operator.css({ top: operatorData.top, left: operatorData.left });
             fullElement.operator.data('operator_id', operatorId);
 
             this.data.operators[operatorId] = operatorData;
             this.data.operators[operatorId].internal.els = fullElement;
 
-            console.log("New operator:");
-            console.log(this.data.operators[operatorId]);
+            //console.log("New operator:");
+            //console.log(this.data.operators[operatorId]);
             if (operatorId == this.selectedOperatorId) {
                 this._addSelectedClass(operatorId);
             }
@@ -972,7 +972,7 @@ jQuery(function ($) {
                     self.removeOpGroupFromParentList(opGr_0.title);
                     opGr_0.parent = "";
                     opGr_0.internal.els.rect.addClass("noGroup");
-                    
+
 
                     var opGr_1 = self.data.opGroups[operatorData.properties.title + "_1"];
                     if (typeof (opGr_1) != "undefined") {
@@ -1021,18 +1021,18 @@ jQuery(function ($) {
             // Small fix has been added in order to manage eventual zoom
             // http://stackoverflow.com/questions/2930092/jquery-draggable-with-zoom-problem
             if (this.options.canUserMoveOperators && operatorData.properties.title != operatorData.opGroup) {
-                
+
                 fullElement.operator.draggable({
                     containment: operatorData.internal.properties.uncontained ? false : this.element,
                     handle: '.flowchart-operator-title, .flowchart-operator-body',
                     start: function (e, ui) {
-						// ---------------------------------------------------
-						// RGT
-						// Stop the drag if the canUserMoveOperators is false...
-						// RGT replace the line below with the other line...
+                        // ---------------------------------------------------
+                        // RGT
+                        // Stop the drag if the canUserMoveOperators is false...
+                        // RGT replace the line below with the other line...
                         //if (self.lastOutputConnectorClicked != null) {
                         if (self.lastOutputConnectorClicked != null || self.options.readOnly == true) {
-						// ---------------------------------------------------
+                            // ---------------------------------------------------
                             e.preventDefault();
                             return;
                         }
@@ -1057,79 +1057,80 @@ jQuery(function ($) {
                                 grid = Math.round(grid / self.positionRatio / self.positionRatio);
                             }
                             //console.log("new grid: " + grid);
-							// Save the original left and right so we can calculate the change...
-							//var uiLeft = ui.position.left;
-							//var uiTop = ui.position.top;
+                            // Save the original left and right so we can calculate the change...
+                            //var uiLeft = ui.position.left;
+                            //var uiTop = ui.position.top;
 
-							var elementOffset = self.element.offset();
+                            var elementOffset = self.element.offset();
                             //set ui.position.left to (the distance of element left edge to parent left under original scale after grid)
                             ui.position.left = Math.round(((e.pageX - elementOffset.left) / self.positionRatio - pointerX) / grid) * grid;
-							ui.position.top = Math.round(((e.pageY - elementOffset.top) / self.positionRatio - pointerY) / grid) * grid;
-                            
+                            ui.position.top = Math.round(((e.pageY - elementOffset.top) / self.positionRatio - pointerY) / grid) * grid;
+
 
                             if (!operatorData.internal.properties.uncontained) {
                                 ui.position.left = Math.max(ui.position.left, 0);
                                 ui.position.top = Math.max(ui.position.top, 0);
-								// ---------------------------------------------------
-								// Stop it from going too far left or too far right...
+                                // ---------------------------------------------------
+                                // Stop it from going too far left or too far right...
                                 //ui.position.left = Math.min(Math.max(ui.position.left, 0), self.objs.layers.operators.width() - (fullElement.operator[0].offsetWidth + 20));
-								// .. same with the top...
+                                // .. same with the top...
                                 //ui.position.top = Math.min(Math.max(ui.position.top, 0), self.objs.layers.operators.height() - (fullElement.operator[0].offsetHeight));
-								// ---------------------------------------------------
+                                // ---------------------------------------------------
                             }
-                            
+
                             //element left to parent element left + parent element left to document left
-							ui.offset.left = Math.round(ui.position.left + elementOffset.left);
+                            ui.offset.left = Math.round(ui.position.left + elementOffset.left);
                             ui.offset.top = Math.round(ui.position.top + elementOffset.top);
 
-							// ---------------------------------------------------
-							// RGT
-							// Calculate the diffs of the operator being moved so they can be applied to the other operators...
-							var originalLeft = parseInt(fullElement.operator.css('left'));
-							var originalTop = parseInt(fullElement.operator.css('top'));
+                            // ---------------------------------------------------
+                            // RGT
+                            // Calculate the diffs of the operator being moved so they can be applied to the other operators...
+                            var originalLeft = parseInt(fullElement.operator.css('left'));
+                            var originalTop = parseInt(fullElement.operator.css('top'));
 
-                            fullElement.operator.css({left: ui.position.left, top: ui.position.top});
+                            fullElement.operator.css({ left: ui.position.left, top: ui.position.top });
 
-							var diffLeft = parseInt(fullElement.operator.css('left')) - originalLeft;
-							var diffTop = parseInt(fullElement.operator.css('top')) - originalTop;
+                            var diffLeft = parseInt(fullElement.operator.css('left')) - originalLeft;
+                            var diffTop = parseInt(fullElement.operator.css('top')) - originalTop;
 
-							// Try to find the dragged operator in the selectedOperators list...
-							// .. if it isn't there then cancel the move of the other operators but keep the list...
-							if (self.selectedOperators.find( operator => { return operator._operatorID == $(this).data('operator_id'); } ) != null) {
-								// Filter out the operator that is being dragged...
-								var filteredOperators = self.selectedOperators.filter( operator => { return operator._operatorID != $(this).data('operator_id'); } );
-								filteredOperators.forEach( operator => {
-									// Move the other operator...
-									// Get the original position...
-									var currentPosition = $(operator).position();
-									// Update the position with the difference...
-									currentPosition.left += diffLeft;
-									currentPosition.top += diffTop;
+                            // Try to find the dragged operator in the selectedOperators list...
+                            // .. if it isn't there then cancel the move of the other operators but keep the list...
+                            if (self.selectedOperators.find(operator => { return operator._operatorID == $(this).data('operator_id'); }) != null) {
+                                // Filter out the operator that is being dragged...
+                                var filteredOperators = self.selectedOperators.filter(operator => { return operator._operatorID != $(this).data('operator_id'); });
+                                filteredOperators.forEach(operator => {
+                                    // Move the other operator...
+                                    // Get the original position...
+                                    var currentPosition = $(operator).position();
+                                    // Update the position with the difference...
+                                    currentPosition.left += diffLeft;
+                                    currentPosition.top += diffTop;
 
-									// Set the position on the screen...
-									$(operator).css({ left: currentPosition.left, top: currentPosition.top });
+                                    // Set the position on the screen...
+                                    $(operator).css({ left: currentPosition.left, top: currentPosition.top });
 
-									// Update the operator data to set the new position...
-									self.data.operators[operator._operatorID].left = currentPosition.left;
-									self.data.operators[operator._operatorID].top = currentPosition.top;
+                                    // Update the operator data to set the new position...
+                                    self.data.operators[operator._operatorID].left = currentPosition.left;
+                                    self.data.operators[operator._operatorID].top = currentPosition.top;
 
-									// Trigger the link redraws...
-									operatorChangedPosition(operator._operatorID, currentPosition, false);
-								});
-							}
-							// ---------------------------------------------------
+                                    // Trigger the link redraws...
+                                    operatorChangedPosition(operator._operatorID, currentPosition, false);
+                                });
+                            }
+                            // ---------------------------------------------------
                         }
-						// Need to somehow change the positions of all of the operators in the drag select list...
+                        // Need to somehow change the positions of all of the operators in the drag select list...
                         operatorChangedPosition($(this).data('operator_id'), ui.position, false);
-                   },
+                    },
                     stop: function (e, ui) {
                         self._unsetTemporaryLink();
                         var operatorId = $(this).data('operator_id');
                         var status = operatorChangedPosition(operatorId, ui.position, true);
+                        /*
                         fullElement.operator.css({
                             height: 'auto'
                         });
-
+                        */
                         if (status != null) {
                             var destOpGrId = status.dest;
                             if (destOpGrId == "noGroup") {
@@ -1138,7 +1139,7 @@ jQuery(function ($) {
                                 self.callbackEvent('operatorMoved', [operatorId, self.data.operators[operatorId], destOpGrId]);
                             }
                         }
-                        
+
                         self.callbackEvent('afterChange', ['operator_moved']);
                     }
                 });
@@ -1147,8 +1148,26 @@ jQuery(function ($) {
             this.callbackEvent('afterChange', ['operator_create']);
         },
 
-        createOpGroup: function (opGroupId, opGroupDataOriginal) {
+        updateOpGroupGeometric: function (opGroupId, opGroupDataOriginal) {
+            var opGrData = this.data.opGroups[opGroupId];
+            opGrData.childGroup = opGroupDataOriginal.childGroup;
+            opGrData.geometric = opGroupDataOriginal.geometric;
+
+            opGrData.internal.els.rect.css({
+                top: opGroupDataOriginal.geometric.rect_y,
+                left: opGroupDataOriginal.geometric.rect_x,
+                width: opGroupDataOriginal.geometric.rect_width,
+                height: opGroupDataOriginal.geometric.rect_height
+            });
+
+            this.resizeCanvas();
+        },
+
+        createOpGroup: function (opGroupId, opGroupDataOriginal, isRestore) {
             var opGroupData = $.extend(true, {}, opGroupDataOriginal);
+            if (isRestore) {
+                opGroupData.childNode = [];
+            }
             if (!this.callbackEvent('opGroupCreate', [opGroupId, opGroupData])) {
                 return;
             }
@@ -1162,117 +1181,119 @@ jQuery(function ($) {
 
             var $opGroupRect = $('<div class="flowchart-opGroup"></div>');
             $opGroupRect.appendTo(this.objs.layers.opGroups);
-            if (opGroupId.slice(-1) == 0 && !opGroupId.startsWith("ROOT")) {
-                //console.log("New opGroup: " + opGroupId);//LOOP1_0
-                //place group into parentSubgroup
-                var parentOpGroup = this.data.opGroups[opGroupData.parent];
-                parentOpGroup.childGroup.push(opGroupId);
-                var parentOpGroupWidth = parseInt(parentOpGroup.internal.els.rect.css('width'));
-                var parentOpGroupHeight = parseInt(parentOpGroup.internal.els.rect.css('height'));
-                opGroupData.geometric.rect_y = parseInt(parentOpGroup.internal.els.rect.css('top')) + parentOpGroupHeight;
-                opGroupData.geometric.rect_x = parseInt(parentOpGroup.internal.els.rect.css('left')) + parentOpGroupWidth;
+            if (!isRestore) {
+                if (opGroupId.slice(-1) == 0 && !opGroupId.startsWith("ROOT")) {
+                    //console.log("New opGroup: " + opGroupId);//LOOP1_0
+                    //place group into parentSubgroup
+                    var parentOpGroup = this.data.opGroups[opGroupData.parent];
+                    parentOpGroup.childGroup.push(opGroupId);
+                    var parentOpGroupWidth = parseInt(parentOpGroup.internal.els.rect.css('width'));
+                    var parentOpGroupHeight = parseInt(parentOpGroup.internal.els.rect.css('height'));
+                    opGroupData.geometric.rect_y = parseInt(parentOpGroup.internal.els.rect.css('top')) + parentOpGroupHeight;
+                    opGroupData.geometric.rect_x = parseInt(parentOpGroup.internal.els.rect.css('left')) + parentOpGroupWidth;
 
-                //extend parent group size until ROOT
-                while (!parentOpGroup.title.startsWith("ROOT")) {
+                    //extend parent group size until ROOT
+                    while (!parentOpGroup.title.startsWith("ROOT")) {
+                        parentOpGroup.geometric.rect_width = parentOpGroupWidth + opGroupData.geometric.rect_width + 10;
+                        parentOpGroup.geometric.rect_height = parentOpGroupHeight + opGroupData.geometric.rect_height + 10;
+
+                        parentOpGroup.internal.els.rect.css({ width: parentOpGroup.geometric.rect_width, height: parentOpGroup.geometric.rect_height });
+
+                        parentOpGroup = this.data.opGroups[parentOpGroup.parent];
+
+                        parentOpGroupWidth = parseInt(parentOpGroup.internal.els.rect.css('width'));
+                        parentOpGroupHeight = parseInt(parentOpGroup.internal.els.rect.css('height'));
+                    }
+
+                    //extend ROOT group
                     parentOpGroup.geometric.rect_width = parentOpGroupWidth + opGroupData.geometric.rect_width + 10;
                     parentOpGroup.geometric.rect_height = parentOpGroupHeight + opGroupData.geometric.rect_height + 10;
 
                     parentOpGroup.internal.els.rect.css({ width: parentOpGroup.geometric.rect_width, height: parentOpGroup.geometric.rect_height });
 
-                    parentOpGroup = this.data.opGroups[parentOpGroup.parent];
+                    //move other elements on the right and the bottom
+                    for (var opId in self.data.operators) {
+                        var isOpMoved = false;
+                        var opData = self.data.operators[opId];
+                        if (opData.left > opGroupData.geometric.rect_x) {
+                            opData.left = opData.left + opGroupData.geometric.rect_width + 10;
+                            opData.internal.els.operator.css({ left: opData.left });
+                            isOpMoved = true;
+                        }
 
-                    parentOpGroupWidth = parseInt(parentOpGroup.internal.els.rect.css('width'));
-                    parentOpGroupHeight = parseInt(parentOpGroup.internal.els.rect.css('height'));
-                } 
+                        if (opData.top > opGroupData.geometric.rect_y) {
+                            opData.top = opData.top + opGroupData.geometric.rect_height + 10;
+                            opData.internal.els.operator.css({ top: opData.top });
+                            isOpMoved = true;
+                        }
 
-                //extend ROOT group
-                parentOpGroup.geometric.rect_width = parentOpGroupWidth + opGroupData.geometric.rect_width + 10;
-                parentOpGroup.geometric.rect_height = parentOpGroupHeight + opGroupData.geometric.rect_height + 10;
+                        if (isOpMoved != true) {
+                            continue;
+                        }
 
-                parentOpGroup.internal.els.rect.css({ width: parentOpGroup.geometric.rect_width, height: parentOpGroup.geometric.rect_height });
-                
-                //move other elements on the right and the bottom
-                for (var opId in self.data.operators) {
-                    var isOpMoved = false;
-                    var opData = self.data.operators[opId];
-                    if (opData.left > opGroupData.geometric.rect_x ) {
-                        opData.left = opData.left + opGroupData.geometric.rect_width + 10;
-                        opData.internal.els.operator.css({ left: opData.left });
-                        isOpMoved = true;
-                    }
-
-                    if (opData.top > opGroupData.geometric.rect_y) {
-                        opData.top = opData.top + opGroupData.geometric.rect_height + 10;
-                        opData.internal.els.operator.css({ top: opData.top });
-                        isOpMoved = true;
-                    }
-
-                    if (isOpMoved != true) {
-                        continue;
-                    }
-
-                    //console.log(opId + "is pushed right or(and) down!");
-                    self.refreshLinkPositionsByOperatorId(opId);
-                }
-
-                for (var opGrId in self.data.opGroups) {
-                    var opGrData = self.data.opGroups[opGrId];
-                    if (opGrData.geometric.rect_x > opGroupData.geometric.rect_x) {
-                        opGrData.geometric.rect_x = opGrData.geometric.rect_x + opGroupData.geometric.rect_width + 10;
-                        opGrData.internal.els.rect.css({ left: opGrData.geometric.rect_x });
-                    }
-
-                    if (opGrData.geometric.rect_y > opGroupData.geometric.rect_y) {
-                        opGrData.geometric.rect_y = opGrData.geometric.rect_y + opGroupData.geometric.rect_height + 10;
-                        opGrData.internal.els.rect.css({ top: opGrData.geometric.rect_y });
-                    }
-                }
-
-            } else if (opGroupId.slice(-1) == 1) {
-                var siblingOpGroup = this.data.opGroups[opGroupId.slice(0, -2) + "_0"];
-                opGroupData.geometric.rect_y = parseInt(siblingOpGroup.internal.els.rect.css('top'));
-                opGroupData.geometric.rect_x = parseInt(siblingOpGroup.internal.els.rect.css('left')) + parseInt(siblingOpGroup.internal.els.rect.css('width')) + 10;
-
-                var parentOpGroup = this.data.opGroups[opGroupData.parent];
-                if (!opGroupId.startsWith("ROOT")) {
-                    parentOpGroup.childGroup.push(opGroupId);
-                }
-                var parentOpGroupWidth = parseInt(parentOpGroup.internal.els.rect.css('width'));
-
-                //extend parent group size until ROOT
-                while (!parentOpGroup.title.startsWith("ROOT")) {
-                    parentOpGroup.geometric.rect_width = parentOpGroupWidth + opGroupData.geometric.rect_width + 10;
-
-                    parentOpGroup.internal.els.rect.css({ width: parentOpGroup.geometric.rect_width});
-
-                    parentOpGroup = this.data.opGroups[parentOpGroup.parent];
-
-                    parentOpGroupWidth = parseInt(parentOpGroup.internal.els.rect.css('width'));
-                }
-
-                //extend ROOT group
-                if (!opGroupId.startsWith("ROOT")) {
-                    parentOpGroup.geometric.rect_width = parentOpGroupWidth + opGroupData.geometric.rect_width + 10;
-                    parentOpGroup.internal.els.rect.css({ width: parentOpGroup.geometric.rect_width });
-                }
-
-                //move other elements on the right
-                for (var opId in self.data.operators) {
-                    var opData = self.data.operators[opId];
-                    if (opData.left > opGroupData.geometric.rect_x) {
-                        opData.left = opData.left + opGroupData.geometric.rect_width + 10;
-                        opData.internal.els.operator.css({ left: opData.left });
-                        
+                        //console.log(opId + "is pushed right or(and) down!");
                         self.refreshLinkPositionsByOperatorId(opId);
                     }
-                }
 
-                for (var opGrId in self.data.opGroups) {
-                    var opGrData = self.data.opGroups[opGrId];
-                    if (opGrData.geometric.rect_x > opGroupData.geometric.rect_x) {
-                        //console.log(opGrId + "is on the right");
-                        opGrData.geometric.rect_x = opGrData.geometric.rect_x + opGroupData.geometric.rect_width + 10;
-                        opGrData.internal.els.rect.css({ left: opGrData.geometric.rect_x });
+                    for (var opGrId in self.data.opGroups) {
+                        var opGrData = self.data.opGroups[opGrId];
+                        if (opGrData.geometric.rect_x > opGroupData.geometric.rect_x) {
+                            opGrData.geometric.rect_x = opGrData.geometric.rect_x + opGroupData.geometric.rect_width + 10;
+                            opGrData.internal.els.rect.css({ left: opGrData.geometric.rect_x });
+                        }
+
+                        if (opGrData.geometric.rect_y > opGroupData.geometric.rect_y) {
+                            opGrData.geometric.rect_y = opGrData.geometric.rect_y + opGroupData.geometric.rect_height + 10;
+                            opGrData.internal.els.rect.css({ top: opGrData.geometric.rect_y });
+                        }
+                    }
+
+                } else if (opGroupId.slice(-1) == 1) {
+                    var siblingOpGroup = this.data.opGroups[opGroupId.slice(0, -2) + "_0"];
+                    opGroupData.geometric.rect_y = parseInt(siblingOpGroup.internal.els.rect.css('top'));
+                    opGroupData.geometric.rect_x = parseInt(siblingOpGroup.internal.els.rect.css('left')) + parseInt(siblingOpGroup.internal.els.rect.css('width')) + 10;
+
+                    var parentOpGroup = this.data.opGroups[opGroupData.parent];
+                    if (!opGroupId.startsWith("ROOT")) {
+                        parentOpGroup.childGroup.push(opGroupId);
+                    }
+                    var parentOpGroupWidth = parseInt(parentOpGroup.internal.els.rect.css('width'));
+
+                    //extend parent group size until ROOT
+                    while (!parentOpGroup.title.startsWith("ROOT")) {
+                        parentOpGroup.geometric.rect_width = parentOpGroupWidth + opGroupData.geometric.rect_width + 10;
+
+                        parentOpGroup.internal.els.rect.css({ width: parentOpGroup.geometric.rect_width });
+
+                        parentOpGroup = this.data.opGroups[parentOpGroup.parent];
+
+                        parentOpGroupWidth = parseInt(parentOpGroup.internal.els.rect.css('width'));
+                    }
+
+                    //extend ROOT group
+                    if (!opGroupId.startsWith("ROOT")) {
+                        parentOpGroup.geometric.rect_width = parentOpGroupWidth + opGroupData.geometric.rect_width + 10;
+                        parentOpGroup.internal.els.rect.css({ width: parentOpGroup.geometric.rect_width });
+                    }
+
+                    //move other elements that are on the right
+                    for (var opId in self.data.operators) {
+                        var opData = self.data.operators[opId];
+                        if (opData.left > opGroupData.geometric.rect_x) {
+                            opData.left = opData.left + opGroupData.geometric.rect_width + 10;
+                            opData.internal.els.operator.css({ left: opData.left });
+
+                            self.refreshLinkPositionsByOperatorId(opId);
+                        }
+                    }
+
+                    for (var opGrId in self.data.opGroups) {
+                        var opGrData = self.data.opGroups[opGrId];
+                        if (opGrData.geometric.rect_x > opGroupData.geometric.rect_x) {
+                            //console.log(opGrId + "is on the right");
+                            opGrData.geometric.rect_x = opGrData.geometric.rect_x + opGroupData.geometric.rect_width + 10;
+                            opGrData.internal.els.rect.css({ left: opGrData.geometric.rect_x });
+                        }
                     }
                 }
             }
@@ -1296,14 +1317,16 @@ jQuery(function ($) {
             var opGroupLeft = parseInt(opGroupData.internal.els.rect.css('left'));
 
             if (opGroupId.slice(-1) == 0) {
-                opGroupData.headNode.top = opGroupTop - 100;
-                opGroupData.headNode.left = opGroupLeft;
-                this.createOperator(opGroupData.headNode.properties.title, opGroupData.headNode);
+                if (!isRestore) {
+                    opGroupData.headNode.top = opGroupTop - 100;
+                    opGroupData.headNode.left = opGroupLeft;
+                }
+                this.createOperator(opGroupData.headNode.properties.title, opGroupData.headNode, isRestore);
             }
 
             opGroupData.entry.top = opGroupTop + 10;
             opGroupData.entry.left = opGroupLeft + 10;
-            this.createOperator(opGroupData.entry.properties.title, opGroupData.entry);
+            this.createOperator(opGroupData.entry.properties.title, opGroupData.entry, isRestore);
             opGroupData.internal.els.entry = this.data.operators[opGroupData.entry.properties.title].internal.els.operator;
 
 
@@ -1350,13 +1373,11 @@ jQuery(function ($) {
                                 if (opGrData.geometric.rect_x < ui.originalPosition.left
                                     && opGrData.geometric.rect_y < ui.originalPosition.top
                                     && (opGrData.geometric.rect_x + opGrData.geometric.rect_width) > (ui.originalPosition.left + ui.originalSize.width)
-                                    && (opGrData.geometric.rect_y + opGrData.geometric.rect_height) > (ui.originalPosition.top + ui.originalSize.height))
-                                {
+                                    && (opGrData.geometric.rect_y + opGrData.geometric.rect_height) > (ui.originalPosition.top + ui.originalSize.height)) {
                                     opGroupsAncestor.push(opGrId);
                                 }
                                 else if (opGrData.geometric.rect_x > (ui.originalPosition.left + ui.originalSize.width)
-                                    && ((opGrData.geometric.rect_y + opGrData.geometric.rect_height > ui.originalPosition.top) || (opGrData.geometric.rect_y < ui.originalPosition.top + ui.originalSize.height)))
-                                {
+                                    && ((opGrData.geometric.rect_y + opGrData.geometric.rect_height > ui.originalPosition.top) || (opGrData.geometric.rect_y < ui.originalPosition.top + ui.originalSize.height))) {
                                     var distance = opGrData.geometric.rect_x - (ui.originalPosition.left + ui.originalSize.width);
                                     opGroupsOutsideFreeSpace.push(opGrId);
                                     //console.log("Distance to " + opGrId + ": " + distance);
@@ -1436,7 +1457,7 @@ jQuery(function ($) {
                                 opGr.geometric.rect_height = opGrHeightOri + distance;
                                 opGr.internal.els.rect.css({ height: opGrHeightOri + distance });
                             }
-                            
+
                         }
                     }
 
@@ -1457,7 +1478,7 @@ jQuery(function ($) {
                                 opGr.geometric.rect_y = opGrTopOri + distance - freeSpace + margin;
                                 opGr.internal.els.rect.css({ top: (opGrTopOri + distance - freeSpace + margin) });
                             }
-                            
+
 
                             //move operators which are inside of opGroup
                             for (var opId in self.data.operators) {
@@ -1474,7 +1495,7 @@ jQuery(function ($) {
                                         opData.internal.els.operator.css({ top: (opTopOri + distance - freeSpace + margin) });
                                     }
                                     movedOp.push(opId);
-                                    
+
                                     self.refreshLinkPositionsByOperatorId(opId);
                                 }
                             }
@@ -1497,7 +1518,7 @@ jQuery(function ($) {
                                 opData.internal.els.operator.css({ top: (opTopOri + distance - freeSpace + margin) });
                                 //console.log("Move " + operatorsOutsideFreeSpace[i] + " to " + opData.internal.els.operator.css('top'));
                             }
-                            
+
                             self.refreshLinkPositionsByOperatorId(operatorsOutsideFreeSpace[i]);
                         }
                     }
@@ -1556,54 +1577,6 @@ jQuery(function ($) {
                     }
 
                 }
-                /*-------------------------------------old DFS------------------------------------------------*/
-                /*
-                while (typeof (opGrId) != "undefined") {
-                    var hasUnmovedChild = false;
-                    var opGrData = self.data.opGroups[opGrId];
-
-                    if (!opGrMoved.includes(opGrId)) {
-                        //move the group itself except the triggerring element 
-                        if (opGrId != opGroup_id) {
-                            opGrData.geometric.rect_x = opGrData.geometric.rect_x + delta_X;
-                            opGrData.geometric.rect_y = opGrData.geometric.rect_y + delta_Y;
-                            opGrData.internal.els.rect.css({ top: opGrData.geometric.rect_y, left: opGrData.geometric.rect_x });
-                        }
-
-                        //move all operators in the group
-                        for (var i = 0; i < opGrData.childNode.length; i++) {
-                            var opId = opGrData.childNode[i];
-                            var opData = self.data.operators[opId];
-                            var oriTop = parseInt(opData.internal.els.operator.css('top'));
-                            var oriLeft = parseInt(opData.internal.els.operator.css('left'));
-                            opData.internal.els.operator.css({ top: oriTop + delta_Y, left: oriLeft + delta_X });
-                            opData.top = parseInt(opData.internal.els.operator.css('top'));
-                            opData.left = parseInt(opData.internal.els.operator.css('left'));
-
-                            self.refreshLinkPositionsByOperatorId(opId);
-                        }
-
-                        opGrData.entry.top = parseInt(opGrData.internal.els.entry.css('top'));
-                        opGrData.entry.left = parseInt(opGrData.internal.els.entry.css('left'));
-
-                        opGrMoved.push(opGrId);
-                    }
-                    
-                    for (var j = 0; j < opGrData.childGroup.length; j++) {
-                        if (!opGrMoved.includes(opGrData.childGroup[j])) {
-                            hasUnmovedChild = true;
-                            opGrStack.push(opGrId);
-                            opGrId = opGrData.childGroup[j];
-                            break;
-                        }
-                    }
-
-                    if (hasUnmovedChild == false) {
-                        opGrId = opGrStack.pop();
-                    }
-                }
-                */
-
 
                 opGroupData.entry.top = parseInt(opGroupData.internal.els.entry.css('top'));
                 opGroupData.entry.left = parseInt(opGroupData.internal.els.entry.css('left'));
@@ -1637,7 +1610,7 @@ jQuery(function ($) {
                         ui.position.left = Math.max(ui.position.left, 0);
                         // .. same with the top ..
                         ui.position.top = Math.max(ui.position.top, 0);
-                        
+
                         ui.offset.left = Math.round(ui.position.left + elementOffset.left);
                         ui.offset.top = Math.round(ui.position.top + elementOffset.top);
 
@@ -1700,13 +1673,13 @@ jQuery(function ($) {
             var opGroupEntry = this.data.opGroups[opGroupId].internal.els.entry;
             var pointerX;
             var pointerY;
-            
+
             function opGroupChangedPosition(opGroup_id, pos) {
                 opGroupEntry.top = pos.top + 10;
                 opGroupEntry.left = pos.left + 10;
 
             }
-            
+
             $opGroupRect.data('opGroup_id', opGroupId);
             $opGroupRect.resizable({ handles: 'n, e, s, w' });
             $opGroupRect.draggable({
@@ -1779,6 +1752,7 @@ jQuery(function ($) {
                 }
                 this.selectedOpGroupId = null;
             }
+
         },
 
         _opGroupMouseOver: function (opGroupId) {
@@ -1816,12 +1790,12 @@ jQuery(function ($) {
                 var x = position.x + position.width;
                 var y = position.y;
 
-				// RGT
-				var xScroll = this.canvas.scrollLeft() / this.positionRatio;
-				var yScroll = this.canvas.scrollTop() / this.positionRatio;
-				var xNew = x + xScroll;
-				var yNew = y + yScroll;
-				// ---------------------------------------------------
+                // RGT
+                var xScroll = this.canvas.scrollLeft() / this.positionRatio;
+                var yScroll = this.canvas.scrollTop() / this.positionRatio;
+                var xNew = x + xScroll;
+                var yNew = y + yScroll;
+                // ---------------------------------------------------
 
                 this.objs.temporaryLink.setAttribute('x1', xNew.toString());
                 this.objs.temporaryLink.setAttribute('y1', yNew.toString());
@@ -1845,7 +1819,7 @@ jQuery(function ($) {
                 this._unsetTemporaryLink();
             }
         },
-        
+
         _unsetTemporaryLink: function () {
             this.lastOutputConnectorClicked = null;
             this.objs.layers.temporaryLink.hide();
@@ -1854,12 +1828,12 @@ jQuery(function ($) {
         _mousemove: function (x, y, e) {
             if (this.lastOutputConnectorClicked != null) {
 
-				// RGT
-				var xScroll = this.canvas.scrollLeft() / this.positionRatio;
-				var yScroll = this.canvas.scrollTop() / this.positionRatio;
-				x += xScroll;
-				y += yScroll;
-				// ---------------------------------------------------
+                // RGT
+                var xScroll = this.canvas.scrollLeft() / this.positionRatio;
+                var yScroll = this.canvas.scrollTop() / this.positionRatio;
+                x += xScroll;
+                y += yScroll;
+                // ---------------------------------------------------
 
                 this.objs.temporaryLink.setAttribute('x2', x);
                 this.objs.temporaryLink.setAttribute('y2', y);
@@ -1902,8 +1876,8 @@ jQuery(function ($) {
         _addSelectedClass: function (operatorId) {
             this.data.operators[operatorId].internal.els.operator.addClass('selected');
         },
-        
-        callbackEvent: function(name, params) {
+
+        callbackEvent: function (name, params) {
             var cbName = 'on' + name.charAt(0).toUpperCase() + name.slice(1);
             var ret = this.options[cbName].apply(this, params);
             if (ret !== false) {
@@ -2028,10 +2002,6 @@ jQuery(function ($) {
             this.colorizeLink(linkId, this.options.defaultSelectedLinkColor);
         },
 
-        deleteOpGroup_unused: function (opGroupId) {
-            this._deleteOpGroup(opGroupId);
-        },
-
         _deleteOpGroup: function (opGroupId) {
             if (this.selectedOpGroupId == opGroupId) {
                 this.unselectOpGroup();
@@ -2074,9 +2044,8 @@ jQuery(function ($) {
             }
 
             if (operatorId.startsWith("Op_")) {
-                if (confirm("Do you want to delete node " + operatorId + "?")) {
-                    this._deleteOperator(operatorId);
-                }
+                //this block should be only triggered by deleting instruction
+                this._deleteOperator(operatorId);
             } else {
                 var opData = this.data.operators[operatorId];
                 if (opData.opGroup == operatorId) {
@@ -2131,29 +2100,6 @@ jQuery(function ($) {
             }
             
             this.removeOperatorFromParentList(operatorId);
-            this.data.operators[operatorId].internal.els.operator.remove();
-            delete this.data.operators[operatorId];
-
-            this.callbackEvent('afterChange', ['operator_delete']);
-        },
-
-        _deleteOperator_unused: function (operatorId, replace) {
-            if (!this.callbackEvent('operatorDelete', [operatorId, replace])) {
-                return false;
-            }
-            if (!replace) {
-                for (var linkId in this.data.links) {
-                    if (this.data.links.hasOwnProperty(linkId)) {
-                        var currentLink = this.data.links[linkId];
-                        if (currentLink.fromOperator == operatorId || currentLink.toOperator == operatorId) {
-                            this._deleteLink(linkId, true);
-                        }
-                    }
-                }
-            }
-            if (!replace && operatorId == this.selectedOperatorId) {
-                this.unselectOperator();
-            }
             this.data.operators[operatorId].internal.els.operator.remove();
             delete this.data.operators[operatorId];
 
@@ -2234,7 +2180,8 @@ jQuery(function ($) {
             if (this.selectedLinkId != null) {
                 this.deleteLink(this.selectedLinkId);
             }
-            if (this.selectedOperatorId != null) {
+
+            if (this.selectedOperatorId != null && (!this.selectedOperatorId.startsWith('Op_'))) {
                 this.deleteOperator(this.selectedOperatorId);
             }
         },
@@ -2350,7 +2297,7 @@ jQuery(function ($) {
                 }
             }
             this._deleteOperator(operatorId, true);
-            this.createOperator(operatorId, operatorData);
+            this.createOperator(operatorId, operatorData, false);
             this._refreshOperatorConnectors(operatorId);
             this.redrawLinksLayer();
             this.callbackEvent('afterChange', ['operator_data_change']);
